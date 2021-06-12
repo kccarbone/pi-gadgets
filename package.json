@@ -1,0 +1,19 @@
+{
+  "name": "pi-gadgets",
+  "version": "0.1.0",
+  "description": "Simple set of node tools for interacting with some common pi addons",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kccarbone/pi-gadgets.git"
+  },
+  "author": "Kyle Carbone",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kccarbone/pi-gadgets/issues"
+  },
+  "homepage": "https://github.com/kccarbone/pi-gadgets#readme"
+}
