@@ -15,5 +15,13 @@
   "bugs": {
     "url": "https://github.com/kccarbone/pi-gadgets/issues"
   },
-  "homepage": "https://github.com/kccarbone/pi-gadgets#readme"
+  "homepage": "https://github.com/kccarbone/pi-gadgets#readme",
+  "dependencies": {
+    "i2c": "^0.2.5",
+    "i2c-bus": "^5.2.2",
+    "lodash": "^4.17.21",
+    "node-consolog": "^1.0.1",
+    "oled-font-pack": "^1.0.1",
+    "rpio": "^2.4.2"
+  }
 }
