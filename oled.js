@@ -81,6 +81,10 @@ async function init(width, height, deviceId = 1, address = 0x3c) {
     await interface.writeStream(stream);
   }
 
+  function clear() {
+    buffer.fill(0);
+  }
+
   function writePixel(x, y, color = 1) {
     if (x < 0 || x > width || y < 0 || y > height) {
       log.warn(`Pixel value (${x},${y}) out of bounds for this display!`);
@@ -159,14 +163,13 @@ async function init(width, height, deviceId = 1, address = 0x3c) {
   await enableDisplay();
 
   // Clear screen
-  buffer.fill(0);
+  clear();
   await update();
-
-  //console.log(fonts.oled_5x7);
 
   return {
     buffer,
     update,
+    clear,
     writeText,
     writePixel,
     writeRect,
