@@ -82,20 +82,18 @@ async function init(width, height, deviceId = 1, address = 0x3c) {
   }
 
   function writePixel(x, y, color = 1) {
-    if (x < 0 || x > width) {
-      log.warn(`X value (${x}) out of bounds!`);
-      return;
-    }
-
-    if (y < 0 || y > height) {
-      log.warn(`Y value (${y}) out of bounds!`);
+    if (x < 0 || x > width || y < 0 || y > height) {
+      log.warn(`Pixel value (${x},${y}) out of bounds for this display!`);
       return;
     }
 
     const byteOffset = Math.floor(y / 8) * width + x;
     const bitMask = 1 << (y % 8);
 
-    if (color) {
+    if (color === 0) {
+      buffer[byteOffset] = buffer[byteOffset] & ~bitMask;
+    }
+    else if (color === 1) {
       buffer[byteOffset] = buffer[byteOffset] | bitMask;
     }
     else {
@@ -119,8 +117,8 @@ async function init(width, height, deviceId = 1, address = 0x3c) {
     writeRect(x, 0, x, height-1, color);
   }
 
-  function writeText(x, y, text, font, color = 1) {
-    font = font || fonts.small_6x8;
+  function writeText(x, y, text, typeFace, color = 1) {
+    font = ((typeof typeFace === 'string') ? fonts[typeFace] : typeFace) || fonts.small_6x8;
 
     for (let i = 0; i < text.length; i++) {
       const cIndex = font.lookup.indexOf(text[i]) * font.width;
@@ -129,7 +127,7 @@ async function init(width, height, deviceId = 1, address = 0x3c) {
       for (let cx = 0; cx < font.width; cx++) {
         for (let cy = 0; cy < font.height; cy++) {
           if (cBytes[cx] & (1 << cy)) {
-            writePixel((x + cx) + (i * (font.width - 0)), y + cy);
+            writePixel((x + cx) + (i * (font.width - 0)), y + cy, color);
           }
         }
       }
