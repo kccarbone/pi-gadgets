@@ -19,13 +19,21 @@ async function init(deviceId, address, blockSize = 32) {
   else {
     log.warn('i2c device not available! Running in mock mode...');
     bus = {
-      writeI2cBlock: () => Promise.resolve()
+      writeByte: () => Promise.resolve(),
+      writeI2cBlock: () => Promise.resolve(),
+      i2cWrite: () => Promise.resolve()
     };
   }
 
   async function sendCommand(cmd, byte) {
     log.trace(`Command: ${hex(cmd)} - ${byte}`);
-    await bus.writeByte(address, cmd, byte);
+    try {
+      await bus.writeByte(address, cmd, byte);
+    }
+    catch (e) {
+      log.error(`Write command failed (${hex(address)})`);
+      log.debug(e);
+    }
   }
 
   async function writeBlock(offset, data) {
@@ -34,17 +42,30 @@ async function init(deviceId, address, blockSize = 32) {
         const cursor = (i * blockSize) + offset;
         const bytes = Buffer.from(x);
         log.trace(`Write: (${hex(address)}): ${hex(cursor)} - ${JSON.stringify(x)}`);
-        await bus.writeI2cBlock(address, cursor, bytes.length, bytes);
+        try {
+          await bus.writeI2cBlock(address, cursor, bytes.length, bytes);
+        }
+        catch (e) {
+          log.error(`Write block failed (${hex(address)})`);
+          log.debug(e);
+        }
       });
     }
     catch (e) {
-      log.error(e);
+      log.error(`Write full block failed (${hex(address)})`);
+      log.debug(e);
     }
   };
 
   async function writeStream(buf) {
     log.trace(`Stream: ${JSON.stringify(buf)}`);
-    await bus.i2cWrite(address, buf.length, buf);
+    try {
+      await bus.i2cWrite(address, buf.length, buf);
+    }
+    catch (e) {
+      log.error(`Write stream failed (${hex(address)})`);
+      log.debug(e);
+    }
   }
 
   function hex(int, size = 2) {
