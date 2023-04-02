@@ -2,7 +2,6 @@ import { Worker } from 'node:worker_threads';
 import { hrtime } from 'node:process';
 import gpio from 'array-gpio';
 import { getLogger } from 'bark-logger';
-import { buffer } from 'stream/consumers';
 
 // Todo:
 //   * Threading?
@@ -112,7 +111,7 @@ class BaseDevice {
 
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
-      const offset = i * this.MAX_LEN;
+      const offset = i * this.MAX_LEN + register;
       const data = [offset, ...chunk];
       const buf = Buffer.from(data);
 

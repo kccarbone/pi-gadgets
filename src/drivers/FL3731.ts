@@ -45,10 +45,15 @@ class FL3731 {
     this.device = new BaseDevice(i2cAddress);
   }
 
+  /** (low-level operation) Set input register to given frame */
+  setFrame(frame: number) {
+    // TODO: only update if it's a different frame
+    this.device.writeByte(FRAME_REGISTER, frame);
+  }
+
   /** (low-level operation) Set a particular value in the SETTINGS data space */
   setSetting(setting: SETTING, value: number) {
-    // TODO: only update we aren't already in settings
-    this.device.writeByte(FRAME_REGISTER, SETTINGS_FRAME);
+    this.setFrame(SETTINGS_FRAME);
     // TODO: only update if the setting/value is different
     this.device.writeByte(setting, value);
   }
@@ -68,15 +73,16 @@ class FL3731 {
     this.setSetting(SETTING.OPERATING_MODE, (mode << 3) + startFrame);
   }
 
-  /** Set the frame that should be displayed (fixed mode only) */
-  setDisplayFrame(frame: number) {
-    this.setSetting(SETTING.DISPLAY_FRAME, frame);
-  }
-
   /** Enable all bits for the given frame */
   enableFrame(frame: number) {
     const bytes = new Array(18).fill(0xff);
-    this.device.writeBlock(frame, bytes);
+    this.setFrame(frame);
+    this.device.writeBlock(0, bytes);
+  }
+
+  /** Display a specific frame (fixed mode only) */
+  displayFrame(frame: number) {
+    this.setSetting(SETTING.DISPLAY_FRAME, frame);
   }
 
 }
