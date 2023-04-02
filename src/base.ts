@@ -2,6 +2,7 @@ import { Worker } from 'node:worker_threads';
 import { hrtime } from 'node:process';
 import gpio from 'array-gpio';
 import { getLogger } from 'bark-logger';
+import { buffer } from 'stream/consumers';
 
 // Todo:
 //   * Threading?
@@ -15,6 +16,7 @@ import { getLogger } from 'bark-logger';
 //   * Mock device?
 
 class BaseDevice {
+  private MAX_LEN = 15;
   private log = getLogger('base-device');
   private nsTime = BigInt(0);
   private nsCount = BigInt(0);
@@ -82,15 +84,41 @@ class BaseDevice {
     return `\x1b[${codes.join(';')}m${str}\x1b[0m`;
   }
 
+  protected chunkArray<T>(arr: T[], chunkSize: number) : T[][] {
+    // Shortcut for truncate decimals
+    const chunkCount = (((arr.length - 1) / chunkSize) | 0) + 1;
+    const lastChunk = chunkCount - 1;
+    const result = new Array(chunkCount);
+
+    for (let i = 0; i < lastChunk; i++) {
+      result[i] = arr.slice((i * chunkSize), (i + 1) * chunkSize);
+    }
+    result[lastChunk] = arr.slice((lastChunk * chunkSize), arr.length);
+
+    return result;
+  }
+
   writeByte(register: number, byte: number) {
     this.writeBlock(register, [byte]);
   }
 
   writeBlock(register: number, data: number[]) {
     this.startTimer();
-    const buf = Buffer.from([register, ...data]);
-    this.log.trace(`${this.style('WRITE', 33)} (${this.hex(register)}): ${this.hex(data)}`);
-    this.i2c.write(buf, buf.length);
+    const chunks = this.chunkArray(data, 15);
+
+    if (chunks.length > 1) {
+      this.log.trace(`Message size: ${data.length} bytes. Sending in ${chunks.length} chunks...`);
+    }
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const offset = i * this.MAX_LEN;
+      const data = [offset, ...chunk];
+      const buf = Buffer.from(data);
+
+      this.log.trace(`${this.style('WRITE', 33)} (${this.hex(offset)}): ${this.hex(chunk)}`);
+      this.i2c.write(buf, buf.length);
+    }
     this.endTimer();
   }
 }
