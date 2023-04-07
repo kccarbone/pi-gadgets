@@ -35,7 +35,7 @@ class BaseDevice {
 
       const tmp = console.log;
       console.log = () => { };
-      this.i2c.setTransferSpeed(400000);
+      this.i2c.setTransferSpeed(100000);
       console.log = tmp;
     }
   }

@@ -11,6 +11,9 @@ import BaseDevice from '../base';
 
 const FRAME_REGISTER = 0xfd;
 const SETTINGS_FRAME = 0x0b;
+const OFFSET_ENABLE = 0x00;
+const OFFSET_BLINK = 0x12;
+const OFFSET_PWM = 0x24;
 
 export enum SETTING {
   OPERATING_MODE = 0x00,
@@ -73,16 +76,25 @@ class FL3731 {
     this.setSetting(SETTING.OPERATING_MODE, (mode << 3) + startFrame);
   }
 
-  /** Enable all bits for the given frame */
+  /** Set the default values for an entire frame */
   enableFrame(frame: number) {
-    const bytes = new Array(18).fill(0xff);
+    const bytes = [
+      ...new Array(18).fill(0xFF), // Enable
+      ...new Array(18).fill(0x00), // Blink
+      ...new Array(144).fill(0x00) // PWM
+    ];
     this.setFrame(frame);
-    this.device.writeBlock(0, bytes);
+    this.device.writeBlock(OFFSET_ENABLE, bytes);
   }
 
   /** Display a specific frame (fixed mode only) */
   displayFrame(frame: number) {
     this.setSetting(SETTING.DISPLAY_FRAME, frame);
+  }
+
+  setLed(frame: number, index: number, pwm: number) {
+    this.setFrame(frame);
+    this.device.writeByte(OFFSET_PWM + index, pwm);
   }
 
 }
