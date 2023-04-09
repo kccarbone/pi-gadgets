@@ -21,23 +21,23 @@ class BaseDevice {
   private nsCount = BigInt(0);
   private nsTotal = BigInt(0);
   protected i2c: any;
+  protected autoInc: boolean;
 
   /**
    * Sup?
    * 
    * @param i2cAddress - Address of the attached device
    */
-  constructor(i2cAddress?: number) {
-    if (i2cAddress) {
-      this.log.debug(`Connecting to i2c device at ${this.hex(i2cAddress)}...`);
-      this.i2c = gpio.startI2C();
-      this.i2c.selectSlave(i2cAddress);
+  constructor(i2cAddress: number, autoIncrement = true) {
+    this.log.debug(`Connecting to i2c device at ${this.hex(i2cAddress)}...`);
+    this.autoInc = autoIncrement;
+    this.i2c = gpio.startI2C();
+    this.i2c.selectSlave(i2cAddress);
 
-      const tmp = console.log;
-      console.log = () => { };
-      this.i2c.setTransferSpeed(100000);
-      console.log = tmp;
-    }
+    const tmp = console.log;
+    console.log = () => { };
+    this.i2c.setTransferSpeed(100000);
+    console.log = tmp;
   }
 
   protected hex(input: number | number[], size = 2) {
@@ -103,7 +103,7 @@ class BaseDevice {
 
   writeBlock(register: number, data: number[]) {
     this.startTimer();
-    const chunks = this.chunkArray(data, 15);
+    const chunks = this.chunkArray(data, this.MAX_LEN);
 
     if (chunks.length > 1) {
       this.log.trace(`Message size: ${data.length} bytes. Sending in ${chunks.length} chunks...`);
@@ -112,10 +112,10 @@ class BaseDevice {
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
       const offset = i * this.MAX_LEN + register;
-      const data = [offset, ...chunk];
+      const data = [(this.autoInc ? offset : register), ...chunk];
       const buf = Buffer.from(data);
 
-      this.log.trace(`${this.style('WRITE', 33)} (${this.hex(offset)}): ${this.hex(chunk)}`);
+      this.log.trace(`${this.style('WRITE', 33)} (${this.hex(data[0])}): ${this.hex(chunk)}`);
       this.i2c.write(buf, buf.length);
     }
     this.endTimer();

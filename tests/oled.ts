@@ -12,4 +12,5 @@ const chip = new SSD1306();
 
 log.info('initializing...');
 chip.init();
+chip.test();
 
