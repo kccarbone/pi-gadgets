@@ -42,8 +42,6 @@ export enum OPERATING_MODE {
 class FL3731 {
   private device: BaseDevice;
 
-  // TODO: implement READ (setting 0x07)
-
   constructor(i2cAddress = 0x74) {
     this.device = new BaseDevice(i2cAddress);
   }
@@ -54,8 +52,14 @@ class FL3731 {
     this.device.writeByte(FRAME_REGISTER, frame);
   }
 
-  /** (low-level operation) Set a particular value in the SETTINGS data space */
-  setSetting(setting: SETTING, value: number) {
+  /** (low-level operation) Read a particular value in the SETTINGS data space */
+  readSetting(setting: SETTING) {
+    this.setFrame(SETTINGS_FRAME);
+    this.device.readBlock(setting, 1);
+  }
+
+  /** (low-level operation) Write a particular value in the SETTINGS data space */
+  writeSetting(setting: SETTING, value: number) {
     this.setFrame(SETTINGS_FRAME);
     // TODO: only update if the setting/value is different
     this.device.writeByte(setting, value);
@@ -63,17 +67,17 @@ class FL3731 {
 
   /** Put device in SHUTDOWN mode */
   disableDevice() {
-    this.setSetting(SETTING.SHUTDOWN, 0);
+    this.writeSetting(SETTING.SHUTDOWN, 0);
   }
 
   /** Take device out of SHUTDOWN mode */
   enableDevice() {
-    this.setSetting(SETTING.SHUTDOWN, 1);
+    this.writeSetting(SETTING.SHUTDOWN, 1);
   }
 
   /** Set the operating mode of this device */
   setOperatingMode(mode: OPERATING_MODE, startFrame = 0) {
-    this.setSetting(SETTING.OPERATING_MODE, (mode << 3) + startFrame);
+    this.writeSetting(SETTING.OPERATING_MODE, (mode << 3) + startFrame);
   }
 
   /** Set the default values for an entire frame */
@@ -89,7 +93,7 @@ class FL3731 {
 
   /** Display a specific frame (fixed mode only) */
   displayFrame(frame: number) {
-    this.setSetting(SETTING.DISPLAY_FRAME, frame);
+    this.writeSetting(SETTING.DISPLAY_FRAME, frame);
   }
 
   setLed(frame: number, index: number, pwm: number) {

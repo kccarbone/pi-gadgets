@@ -19,6 +19,12 @@ sleep(100).then(() => {
   chip.setLed(0, 16, 35);
   chip.setLed(0, 143, 100);
   chip.displayFrame(0);
+  
+  chip.readSetting(SETTING.SHUTDOWN);
+
+  chip.readSetting(SETTING.AUTO_PLAY_DELAY);
+  chip.writeSetting(SETTING.AUTO_PLAY_DELAY, 43);
+  chip.readSetting(SETTING.AUTO_PLAY_DELAY);
 
   log.debug('done!');
 });

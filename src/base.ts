@@ -97,6 +97,24 @@ class BaseDevice {
     return result;
   }
 
+  readByte(register: number) {
+    return this.readBlock(register, 1);
+  }
+  
+  readBlock(register: number, size: number) {
+    this.startTimer();
+    const buf = Buffer.alloc(size);
+
+    this.i2c.write(Buffer.from([register]), 1);
+    this.i2c.read(buf, size);
+
+    const result = [...buf];
+    this.log.trace(`${this.style('READ', 32)} (${this.hex(register)}): ${this.hex(result)}`);
+    this.endTimer();
+
+    return result;
+  }
+
   writeByte(register: number, byte: number) {
     this.writeBlock(register, [byte]);
   }
