@@ -12,19 +12,36 @@ const chip = new FL3731();
 
 log.info('setting mode');
 chip.disableDevice();
-sleep(100).then(() => {
-  chip.enableDevice();
-  chip.setOperatingMode(OPERATING_MODE.FIXED);
-  chip.enableFrame(0);
-  chip.setLed(0, 16, 35);
-  chip.setLed(0, 143, 100);
-  chip.displayFrame(0);
-  
-  chip.readSetting(SETTING.SHUTDOWN);
+sleep(100).then(async () => {
 
-  chip.readSetting(SETTING.AUTO_PLAY_DELAY);
-  chip.writeSetting(SETTING.AUTO_PLAY_DELAY, 43);
-  chip.readSetting(SETTING.AUTO_PLAY_DELAY);
+  // Frame 0
+  chip.enableFrame(0);
+  chip.setChannel(0, 16, 35);
+  chip.setChannel(0, 17, 45);
+  chip.setChannel(0, 18, 55);
+  chip.setBlink(0, 16, true);
+  chip.setBlink(0, 50, true);
+
+  // Frame 1
+  chip.enableFrame(1);
+  chip.setChannel(1, 66, 80);
+  chip.setChannel(1, 67, 80);
+  chip.setChannel(1, 68, 80);
+  
+  // Global settings
+  //chip.disableBlink();
+  //chip.disableBreath();
+  chip.enableBlink(7);
+  chip.enableBreath(6, 3);
+  chip.setModeAutoPlay(0, 2);
+  chip.enableDevice();
+
+  
+  //chip.readSetting(SETTING.SHUTDOWN);
+
+  //chip.readSetting(SETTING.AUTO_PLAY_DELAY);
+  //chip.writeSetting(SETTING.AUTO_PLAY_DELAY, 5);
+  //chip.readSetting(SETTING.AUTO_PLAY_DELAY);
 
   log.debug('done!');
 });

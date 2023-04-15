@@ -20,7 +20,7 @@ export enum SETTING {
   DISPLAY_FRAME = 0x01,
   AUTO_PLAY_MODE = 0x02,
   AUTO_PLAY_DELAY = 0x03,
-  DISPLAY_MODE = 0x05,
+  DISPLAY_OPTIONS = 0x05,
   AUDIO_SYNC = 0x06,
   FRAME_STATE = 0x07, // Read-only
   BREATH_RAMP = 0x08,
@@ -39,6 +39,8 @@ export enum OPERATING_MODE {
   AUDIO = 0x10
 }
 
+const bit = (bool: boolean) => (bool ? 1 : 0);
+
 class FL3731 {
   private device: BaseDevice;
 
@@ -55,7 +57,7 @@ class FL3731 {
   /** (low-level operation) Read a particular value in the SETTINGS data space */
   readSetting(setting: SETTING) {
     this.setFrame(SETTINGS_FRAME);
-    this.device.readBlock(setting, 1);
+    this.device.readByte(setting);
   }
 
   /** (low-level operation) Write a particular value in the SETTINGS data space */
@@ -75,30 +77,123 @@ class FL3731 {
     this.writeSetting(SETTING.SHUTDOWN, 1);
   }
 
-  /** Set the operating mode of this device */
-  setOperatingMode(mode: OPERATING_MODE, startFrame = 0) {
-    this.writeSetting(SETTING.OPERATING_MODE, (mode << 3) + startFrame);
+  /** Fixed mode: Display one frame at a time
+   * @param frame (optional) The initial frame to display
+   */
+  setModeFixed(frame?: number) {
+    this.writeSetting(SETTING.OPERATING_MODE, (OPERATING_MODE.FIXED << 3));
+
+    if (typeof frame === 'number') {
+      this.displayFrame(frame)
+    }
   }
 
-  /** Set the default values for an entire frame */
+  /** AutoPlay mode: Automatically rotate through frames
+   * @param frameStart (optional) The first frame in the rotation
+   * @param framesToPlay (optional) The number of frames to loop through (starting with frameStart), 0 = all
+   * @param frameDelay (optional) Delay between frames (1-63) using x * 11ms, 0 = 64
+   * @param loopCount (optional) Number of times to run the loop before stopping (1-7), 0 = unlimited
+   */
+  setModeAutoPlay(frameStart = 0, framesToPlay = 0, frameDelay = 0, loopCount = 0) {
+    this.writeSetting(SETTING.AUTO_PLAY_MODE, ((loopCount << 4) + framesToPlay));
+    this.writeSetting(SETTING.AUTO_PLAY_DELAY, frameDelay);
+    this.writeSetting(SETTING.OPERATING_MODE, (OPERATING_MODE.AUTO_PLAY << 3) + frameStart);
+  }
+
+  /** Audio mode: Sync to audio input */
+  setModeAudio() {
+    this.writeSetting(SETTING.OPERATING_MODE, (OPERATING_MODE.AUDIO << 3));
+    this.enableAudioSync();
+  }
+
+  /** Enable audio sync (set mode first) 
+   * @param sampleRate (optional) Sample rate of ADC (0 - 255), 0 = 256
+   * @param useAgc (optional) Enable audio gain control
+   * @param agcFast (optional) Use "fast mode" for audio gain control
+   * @param gain (optional) Audio gain (0-7) using x * 3db
+  */
+  enableAudioSync(sampleRate = 0, useAgc = false, agcFast = false, gain = 0) {
+    this.writeSetting(SETTING.AUDIO_SAMPLING, sampleRate);
+    this.writeSetting(SETTING.AUDIO_GAIN, ((bit(agcFast) << 4) + (bit(useAgc) << 3) + gain));
+    this.writeSetting(SETTING.AUDIO_SYNC, 1);
+  }
+
+  /** Disable audio sync (set mode first) */
+  disableAudioSync() {
+    this.writeSetting(SETTING.AUDIO_SYNC, 0);
+  }
+
+  /** Enable blink function
+   * @param blinkDelay Delay time (0-7) using x * 270ms
+   */
+  enableBlink(blinkDelay: number) {
+    this.writeSetting(SETTING.DISPLAY_OPTIONS, ((1 << 3) + blinkDelay));
+  }
+
+  /** Disable blink function */
+  disableBlink() {
+    this.writeSetting(SETTING.DISPLAY_OPTIONS, 0);
+  }
+
+  /** Enable breath function
+   * @param fadeIn Ramp up time (0-7) using 2^x * 26ms
+   * @param fadeOut Ramp down time (0-7) using 2^x * 26ms
+   * @param extinguish (optional) Extinguish time (0-7) using 2^x * 3.5ms
+   */
+  enableBreath(fadeIn: number, fadeOut: number, extinguish = 0) {
+    this.writeSetting(SETTING.BREATH_RAMP, ((fadeOut << 4) + fadeIn));
+    this.writeSetting(SETTING.BREATH_MODE, ((1 << 4) + extinguish));
+  }
+
+  /** Disable breath function */
+  disableBreath() {
+    this.writeSetting(SETTING.BREATH_MODE, 0);
+  }
+
+  /** Set the default values for an entire frame
+   * @param frame The frame (0-7)
+   */
   enableFrame(frame: number) {
     const bytes = [
       ...new Array(18).fill(0xFF), // Enable
       ...new Array(18).fill(0x00), // Blink
-      ...new Array(144).fill(0x00) // PWM
+      ...new Array(144).fill(0x01) // PWM
     ];
     this.setFrame(frame);
     this.device.writeBlock(OFFSET_ENABLE, bytes);
   }
 
-  /** Display a specific frame (fixed mode only) */
+  /** Display a specific frame (fixed mode only) 
+   * @param frame The frame (0-7)
+  */
   displayFrame(frame: number) {
     this.writeSetting(SETTING.DISPLAY_FRAME, frame);
   }
 
-  setLed(frame: number, index: number, pwm: number) {
+  /** Set the blink state of a specific channel 
+   * @param frame The frame (0-7)
+   * @param channel ID of the channel (0-143)
+   * @param blink Blink enabled?
+  */
+  setBlink(frame: number, channel: number, blink: boolean) {
+    const register = ~~(channel / 8);
+    const bit = channel % 8;
+    const mask = 1 << bit;
+
     this.setFrame(frame);
-    this.device.writeByte(OFFSET_PWM + index, pwm);
+
+    // TODO: refactor to use buffer and preserve other bits
+    this.device.writeByte(OFFSET_BLINK + register, mask);
+  }
+
+  /** Set the PWM state of a specific channel 
+   * @param frame The frame (0-7)
+   * @param channel ID of the channel (0-143)
+   * @param pwm PWM value (0-255)
+  */
+  setChannel(frame: number, channel: number, pwm: number) {
+    this.setFrame(frame);
+    this.device.writeByte(OFFSET_PWM + channel, pwm);
   }
 
 }
