@@ -157,11 +157,20 @@ class FL3731 {
     const bytes = [
       ...new Array(18).fill(0xFF), // Enable
       ...new Array(18).fill(0x00), // Blink
-      ...new Array(144).fill(0x01) // PWM
+      ...new Array(144).fill(0x00) // PWM
     ];
     this.setFrame(frame);
     this.device.writeBlock(OFFSET_ENABLE, bytes);
   }
+
+  /** Sets all PWM channels in the given frame to zero
+   * @param frame The frame (0-7)
+   */
+  clearFrame(frame: number) {
+    this.setFrame(frame);
+    this.device.writeBlock(OFFSET_PWM, new Array(144).fill(0x00));
+  }
+
 
   /** Display a specific frame (fixed mode only) 
    * @param frame The frame (0-7)
