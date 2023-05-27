@@ -30,12 +30,15 @@ session.writeLine('');
 session.writeLine('');
 session.writeLine('');
 session.writeLine('');
-session.writeLine('');
+session.writeLine(`[${style('Connecting', '33')}]`);
 
 session.onArrowUp(() => { bright++; update(); });
 session.onArrowDown(() => { bright--; update(); });
-session.onArrowLeft(() => { index--; update(); });
-session.onArrowRight(() => { index++; update(); });
+session.onArrowLeft((shift: boolean) => { index--; update(!shift); });
+session.onArrowRight((shift: boolean) => { index++; update(!shift); });
+session.onArrowLeftOpt(() => { index -= 16; update(); });
+session.onArrowRightOpt(() => { index += 16; update(); });
+session.onEnd(() => dispose());
 
 chip.disableDevice();
 chip.disableBlink();
@@ -47,7 +50,7 @@ chip.enableDevice();
 update();
 session.begin();
 
-function update() {
+function update(clear = true) {
   if (index < 0) index = 0;
   if (index > 143) index = 143;
   if (bright < 0) bright = 0;
@@ -81,8 +84,17 @@ function update() {
   session.writeLine('');
   session.writeLine(`[${style('Updating', '33')}]       `);
 
-  chip.clearFrame(frame);
+  if (clear) {
+    chip.clearFrame(frame);
+  }
   chip.setChannel(frame, index, bright);
 
   session.overwriteLine(`[${style('Ready', '32')}]       `);
+}
+
+function dispose() {
+  session.overwriteLine(`[${style('Closing', '33')}]       `);
+  chip.clearFrame(frame);
+  chip.disableDevice();
+  session.overwriteLine('', 2);
 }
