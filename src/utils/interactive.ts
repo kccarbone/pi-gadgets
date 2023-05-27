@@ -1,4 +1,4 @@
-import { env, argv, stdin, exit } from 'node:process';
+import { stdin, stdout, exit } from 'node:process';
 
 const KEY_INTERRUPT = [[3]];
 const KEY_UP =    [[27,91,65]];
@@ -68,6 +68,18 @@ class InteractiveSession {
     stdin.on('data', this.dataReceived.bind(this));
     stdin.setRawMode(true);
     stdin.resume();
+  }
+
+  writeLine(msg: string) {
+    stdout.write(msg);
+    stdout.write('\n');
+  }
+
+  overwriteLine(msg: string, lines = 1) {
+    stdout.moveCursor(0, (lines * -1));
+    stdout.clearLine(0);
+    stdout.write(msg);
+    stdout.write('\n');
   }
 }
 
