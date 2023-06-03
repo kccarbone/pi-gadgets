@@ -4,6 +4,7 @@ import { BaseDevice } from '../src';
 
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+const hex = (num: number) => num.toString(16).toUpperCase().padStart(2, '0');
 const log = new Logger('battery');
 config.threshold = env.LOGLEVEL ?? Levels.TRACE;
 
@@ -31,9 +32,10 @@ log.info(`Current voltage: ${voltage} (raw=${vValue})`);
 
 // Read SOC
 const sData = device.readBlock(0x04, 2);
-const soc = sData[0] / 256;
+const socInt = sData[0];
+const socDec = sData[1];
 
-log.info(`State of Charge: ${soc} (raw=${sData[0]})`);
+log.info(`State of Charge: ${socInt}.${socDec}% (raw=0x${hex(sData[0])} 0x${hex(sData[1])})`);
 
 // Read charge rate
 const dData = device.readBlock(0x16, 2);
