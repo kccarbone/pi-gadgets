@@ -100,7 +100,7 @@ class SSD1306 {
     this.device.writeByte(COMMAND_BYTE, 0);
     this.device.writeByte(COMMAND_BYTE, (height / 8) - 1);
 
-    const data = new Array(512).fill(0x00);
+    const data = new Array(512).fill(0x01);
 
     this.device.writeBlock(DATA_STREAM, data);
   }

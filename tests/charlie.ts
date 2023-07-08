@@ -20,6 +20,11 @@ log.info('setting mode');
 chip.disableDevice();
 sleep(100).then(async () => {
 
+  // Global settings
+  chip.disableBlink();
+  chip.disableBreath();
+  chip.setModeFixed(0);
+
   // Frame 0
   chip.enableFrame(0);
 
@@ -34,12 +39,13 @@ sleep(100).then(async () => {
     log.info(`Setting channel ${chan} to ${pwm}`);
     chip.setChannel(0, chan, pwm);
   }
+  else {
+    chip.fillFrame(0, 30);
+    chip.enableBreath(6, 6, 4);
+    chip.setModeAutoPlay(0, 1);
+  }
 
   
-  // Global settings
-  chip.disableBlink();
-  chip.disableBreath();
-  chip.setModeFixed(0);
   chip.enableDevice();
 
   

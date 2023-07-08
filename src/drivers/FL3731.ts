@@ -43,6 +43,8 @@ const bit = (bool: boolean) => (bool ? 1 : 0);
 
 class FL3731 {
   private device: BaseDevice;
+  private curFrame = 0;
+  private curSetting = new Array(12).fill(-1);
 
   constructor(i2cAddress = 0x74) {
     this.device = new BaseDevice(i2cAddress);
@@ -50,8 +52,10 @@ class FL3731 {
 
   /** (low-level operation) Set input register to given frame */
   setFrame(frame: number) {
-    // TODO: only update if it's a different frame
-    this.device.writeByte(FRAME_REGISTER, frame);
+    if (frame !== this.curFrame) {
+      this.device.writeByte(FRAME_REGISTER, frame);
+      this.curFrame = frame;
+    }
   }
 
   /** (low-level operation) Read a particular value in the SETTINGS data space */
@@ -63,8 +67,11 @@ class FL3731 {
   /** (low-level operation) Write a particular value in the SETTINGS data space */
   writeSetting(setting: SETTING, value: number) {
     this.setFrame(SETTINGS_FRAME);
-    // TODO: only update if the setting/value is different
-    this.device.writeByte(setting, value);
+    
+    if (value !== this.curSetting[setting]) {
+      this.device.writeByte(setting, value);
+      this.curSetting[setting] = value;
+    }
   }
 
   /** Put device in SHUTDOWN mode */
@@ -163,14 +170,21 @@ class FL3731 {
     this.device.writeBlock(OFFSET_ENABLE, bytes);
   }
 
+  /** Sets all PWM channels in the given frame to the given value
+   * @param frame The frame (0-7)
+   * @param pwm PWM value (0-255)
+   */
+  fillFrame(frame: number, pwm: number) {
+    this.setFrame(frame);
+    this.device.writeBlock(OFFSET_PWM, new Array(144).fill(pwm));
+  }
+
   /** Sets all PWM channels in the given frame to zero
    * @param frame The frame (0-7)
    */
   clearFrame(frame: number) {
-    this.setFrame(frame);
-    this.device.writeBlock(OFFSET_PWM, new Array(144).fill(0x00));
+    this.fillFrame(frame, 0);
   }
-
 
   /** Display a specific frame (fixed mode only) 
    * @param frame The frame (0-7)

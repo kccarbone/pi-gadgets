@@ -69,6 +69,9 @@ device.readBlock(0x0a, 2);
 // Clear alerts
 //device.writeBlock(0x1a, [0x00, 0x00]);
 
+// Quick start MCP 73871
+//(async () => { log.warn('quik starting!'); await sleep(400); device.writeBlock(0x06, [0x40, 0x00]); })();
+
 // Reset
 //device.writeBlock(0xFE, [0x54, 0x00]);
 
