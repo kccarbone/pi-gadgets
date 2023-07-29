@@ -2,6 +2,7 @@ import { Worker } from 'node:worker_threads';
 import { hrtime } from 'node:process';
 import gpio from 'array-gpio';
 import { getLogger } from 'bark-logger';
+import { style, hex } from './utils/formatting';
 
 // Todo:
 //   * Threading?
@@ -13,6 +14,7 @@ import { getLogger } from 'bark-logger';
 //   * Add chunking (break with 18-byte array)
 //   * Refactor console.log squelch 
 //   * Mock device?
+//   * Refactor write method to use Buffer
 
 class BaseDevice {
   private MAX_LEN = 15;
@@ -29,7 +31,7 @@ class BaseDevice {
    * @param i2cAddress - Address of the attached device
    */
   constructor(i2cAddress: number, autoIncrement = true) {
-    this.log.debug(`Connecting to i2c device at ${this.hex(i2cAddress)}...`);
+    this.log.debug(`Connecting to i2c device at ${hex(i2cAddress)}...`);
     this.autoInc = autoIncrement;
     this.i2c = gpio.startI2C();
     this.i2c.selectSlave(i2cAddress);
@@ -38,12 +40,6 @@ class BaseDevice {
     console.log = () => { };
     this.i2c.setTransferSpeed(100000);
     console.log = tmp;
-  }
-
-  protected hex(input: number | number[], size = 2) {
-    return (Array.isArray(input) ? input : [input])
-      .map(x => `0x${x.toString(16).toUpperCase().padStart(size, '0')}`)
-      .join(' ');
   }
 
   protected timeParts(ticks: bigint) {
@@ -73,14 +69,10 @@ class BaseDevice {
     const avg = this.timeParts(this.nsTotal / this.nsCount)[0];
 
     this.log.trace(''
-      + this.style('  Operation completed in ', 90)
-      + this.style(time, 1, 90)
-      + this.style(` (avg: ${avg})`, 90)
+      + style('  Operation completed in ', 90)
+      + style(time, 1, 90)
+      + style(` (avg: ${avg})`, 90)
     );
-  }
-
-  protected style(str: string, ...codes: number[]) {
-    return `\x1b[${codes.join(';')}m${str}\x1b[0m`;
   }
 
   protected chunkArray<T>(arr: T[], chunkSize: number) : T[][] {
@@ -109,7 +101,7 @@ class BaseDevice {
     this.i2c.read(buf, size);
 
     const result = [...buf];
-    this.log.trace(`${this.style('READ', 32)} (${this.hex(register)}): ${this.hex(result)}`);
+    this.log.trace(`${style('READ', 32)} (${hex(register)}): ${hex(result)}`);
     this.endTimer();
 
     return result;
@@ -133,7 +125,7 @@ class BaseDevice {
       const data = [(this.autoInc ? offset : register), ...chunk];
       const buf = Buffer.from(data);
 
-      this.log.trace(`${this.style('WRITE', 33)} (${this.hex(data[0])}): ${this.hex(chunk)}`);
+      this.log.trace(`${style('WRITE', 33)} (${hex(data[0])}): ${hex(chunk)}`);
       this.i2c.write(buf, buf.length);
     }
     this.endTimer();

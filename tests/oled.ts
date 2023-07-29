@@ -8,9 +8,20 @@ const log = new Logger('oled');
 config.threshold = env.LOGLEVEL ?? Levels.TRACE;
 
 log.info('Starting test');
-const chip = new SSD1306();
+const chip = new SSD1306(128, 32);
 
 log.info('initializing...');
 chip.init();
-chip.test();
+
+log.info('test');
+
+for (let i = 0; i < 4; i++){
+  for (let j = 0; j < 32; j++){
+    const v = (i % 2) ? j : (31 - j);
+    chip.drawPixel((i * 32) + j, v);
+  }
+}
+
+
+chip.update();
 

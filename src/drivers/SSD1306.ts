@@ -1,6 +1,7 @@
 import { env } from 'node:process';
 import { getLogger } from 'bark-logger';
 import BaseDevice from '../base';
+import { hex } from '../utils/formatting';
 
 /* SSD1306
  * Driver for SSD1306 and related monochrome OLED displays
@@ -75,15 +76,47 @@ const startup = [
   SET_DISP | 0x01
 ];
 
+class Rect {
+  public readonly w: number;
+  public readonly h: number;
+  public readonly x: number;
+  public readonly y: number;
 
+  constructor(w: number, h: number, x = 0, y = 0) {
+    this.w = w;
+    this.h = h;
+    this.x = x;
+    this.y = y;
+  }
+}
+
+export enum COLOR {
+  BLACK = 0,
+  WHITE = 1,
+  INVERT = 2
+}
 
 class SSD1306 {
-  private device: BaseDevice;
+  /* 
+  * TODO:
+  *   - Fix hardcoded width/height
+  *   - Methods for individual options
+  *   - Optimize write
+  */
 
-  constructor(i2cAddress = 0x3c) {
+  private deviceId: String;
+  private device: BaseDevice;
+  private bounds: Rect;
+  private buffer: Buffer;
+
+  constructor(width: number, height: number, i2cAddress = 0x3c) {
+    this.deviceId = `${hex(i2cAddress)}`;
     this.device = new BaseDevice(i2cAddress, false);
+    this.bounds = new Rect(width, height);
+    this.buffer = Buffer.alloc((width * height) / 8, 0);
   }
 
+  /** Initialize device with settings */
   init() {
     //this.device.writeByte(COMMAND_BYTE, 0x00);
 
@@ -92,6 +125,57 @@ class SSD1306 {
     }
   }
 
+  /** Draw a single pixel
+   * @param x X position of pixel
+   * @param y Y position of pixel
+   * @param color Color of this pixel 
+   */
+  drawPixel(x: number, y: number, color = COLOR.WHITE) {
+    if (x < 0 || y < 0 || x >= this.bounds.w || y >= this.bounds.h) {
+      log.warn(`Pixel value (${x},${y}) out of bounds for this display!`);
+      return;
+    }
+
+    /*    Bytes
+    *   |0123456...
+    *  -+----------
+    *  B|0000000...
+    *  i|1111111...
+    *  t|..........
+    *  s|6666666...
+    *   |7777777...
+    */
+    const offset = (Math.trunc(y / 8) * this.bounds.w) + x;
+    const bitMask = 1 << (y % 8);
+    const curByte = this.buffer[offset];
+    let newByte = 0;
+
+    switch (color) {
+      case COLOR.BLACK: newByte = curByte & ~bitMask; break;
+      case COLOR.WHITE: newByte = curByte | bitMask; break;
+      case COLOR.INVERT: newByte = curByte ^ bitMask; break;
+      default: break;
+    }
+
+    if (curByte !== newByte) {
+      this.buffer[offset] = newByte;
+    }
+  }
+
+  /** Push the contents of the display buffer to the device */
+  update() {
+    log.debug(`Updating display ${this.deviceId}`);
+
+    this.device.writeByte(COMMAND_BYTE, SET_COL_ADDR);
+    this.device.writeByte(COMMAND_BYTE, 0);
+    this.device.writeByte(COMMAND_BYTE, width - 1);
+    this.device.writeByte(COMMAND_BYTE, SET_PAGE_ADDR);
+    this.device.writeByte(COMMAND_BYTE, 0);
+    this.device.writeByte(COMMAND_BYTE, (height / 8) - 1);
+    this.device.writeBlock(DATA_STREAM, Array.from(this.buffer));
+  }
+
+  /** Debug only */
   test() {
     this.device.writeByte(COMMAND_BYTE, SET_COL_ADDR);
     this.device.writeByte(COMMAND_BYTE, 0);
@@ -100,7 +184,7 @@ class SSD1306 {
     this.device.writeByte(COMMAND_BYTE, 0);
     this.device.writeByte(COMMAND_BYTE, (height / 8) - 1);
 
-    const data = new Array(512).fill(0x01);
+    const data = new Array(512).fill(0b00000001);
 
     this.device.writeBlock(DATA_STREAM, data);
   }
