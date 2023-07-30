@@ -111,7 +111,7 @@ class SSD1306 {
 
   constructor(width: number, height: number, i2cAddress = 0x3c) {
     this.deviceId = `${hex(i2cAddress)}`;
-    this.device = new BaseDevice(i2cAddress, false);
+    this.device = new BaseDevice(i2cAddress, 400, false);
     this.bounds = new Rect(width, height);
     this.buffer = Buffer.alloc((width * height) / 8, 0);
   }

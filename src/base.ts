@@ -26,11 +26,13 @@ class BaseDevice {
   protected autoInc: boolean;
 
   /**
-   * Sup?
+   * Foundational API for i2c devices
    * 
-   * @param i2cAddress - Address of the attached device
+   * @param i2cAddress Address of the attached device
+   * @param speed Bus speed in kHz
+   * @param autoIncrement Automatically increment address for large writes
    */
-  constructor(i2cAddress: number, autoIncrement = true) {
+  constructor(i2cAddress: number, speed = 400, autoIncrement = true) {
     this.log.debug(`Connecting to i2c device at ${hex(i2cAddress)}...`);
     this.autoInc = autoIncrement;
     this.i2c = gpio.startI2C();
@@ -38,7 +40,7 @@ class BaseDevice {
 
     const tmp = console.log;
     console.log = () => { };
-    this.i2c.setTransferSpeed(100000);
+    this.i2c.setTransferSpeed(speed * 1000);
     console.log = tmp;
   }
 
