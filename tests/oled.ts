@@ -11,7 +11,8 @@ log.info('Starting test');
 const chip = new SSD1306(128, 32);
 
 log.info('initializing...');
-chip.init();
+chip.initDefault();
+//chip.init_old();
 
 log.info('test');
 
@@ -25,3 +26,27 @@ for (let i = 0; i < 4; i++){
 
 chip.update();
 
+setTimeout(() => {
+  chip.erase();
+}, 3000);
+
+
+setTimeout(() => {
+  chip.lines();
+}, 4000);
+
+
+setTimeout(() => {
+  for (let i = 0; i < 4; i++){
+    for (let j = 0; j < 16; j++){
+      const v = (i % 2) ? j : (31 - j);
+      chip.drawPixel((i * 32) + j, v);
+    }
+  }
+  chip.update();
+}, 6000);
+
+
+setTimeout(() => {
+  chip.setDisplayEnabled(false);
+}, 9000);
