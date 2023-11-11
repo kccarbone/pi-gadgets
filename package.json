@@ -6,8 +6,8 @@
   "scripts": {
     "build": "tsc",
     "local": "tsc -w",
-    "test": "tsc && node build/tests/oled.js",
-    "testc": "node build/tests/oled.js",
+    "test": "tsc && node build/tests/usb-pd.js",
+    "testc": "node build/tests/usb-pd.js",
     "clean": "rm -rf build/ out/",
     "link": "tsc && mkdir -p out/lib && cp package.json out/ && cp -r build/src/* out/lib/ && cd out/ && npm link",
     "prerelease": "rm -rf build/ out/ && tsc && mkdir -p out/lib && cp package.json out/ && cp LICENSE out/ && cp -r build/src/* out/lib/ && npm publish --tag next out/"

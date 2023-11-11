@@ -92,7 +92,7 @@ class BaseDevice {
   }
 
   readByte(register: number) {
-    return this.readBlock(register, 1);
+    return this.readBlock(register, 1)[0];
   }
   
   readBlock(register: number, size: number) {

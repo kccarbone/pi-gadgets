@@ -61,7 +61,7 @@ class FL3731 {
   /** (low-level operation) Read a particular value in the SETTINGS data space */
   readSetting(setting: SETTING) {
     this.setFrame(SETTINGS_FRAME);
-    this.device.readByte(setting);
+    return this.device.readByte(setting);
   }
 
   /** (low-level operation) Write a particular value in the SETTINGS data space */
