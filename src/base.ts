@@ -1,20 +1,16 @@
 import { Worker } from 'node:worker_threads';
 import { hrtime } from 'node:process';
-import gpio from 'array-gpio';
 import { getLogger } from 'bark-logger';
 import { style, hex } from './utils/formatting';
+import i2cbus from 'i2c-bus';
 
 // Todo:
 //   * Threading?
 //   * Timing (refactor into util?)
 //   * Colors for output
-//   * Function param annotations
-//   * try 400kHz
-//   * Check for sudo when i2c is used
-//   * Add chunking (break with 18-byte array)
-//   * Refactor console.log squelch 
 //   * Mock device?
 //   * Refactor write method to use Buffer
+//   * Alternate i2c libraries
 
 class BaseDevice {
   private MAX_LEN = 15;
@@ -22,7 +18,8 @@ class BaseDevice {
   private nsTime = BigInt(0);
   private nsCount = BigInt(0);
   private nsTotal = BigInt(0);
-  protected i2c: any;
+  protected bus: i2cbus.I2CBus;
+  protected devAddr: number;
   protected autoInc: boolean;
 
   /**
@@ -35,15 +32,31 @@ class BaseDevice {
   constructor(i2cAddress: number, speed = 400, autoIncrement = true) {
     this.log.debug(`Connecting to i2c device at ${hex(i2cAddress)}...`);
     this.autoInc = autoIncrement;
-    this.i2c = gpio.startI2C();
-    this.i2c.selectSlave(i2cAddress);
-
-    const tmp = console.log;
-    console.log = () => { };
-    this.i2c.setTransferSpeed(speed * 1000);
-    console.log = tmp;
+    this.devAddr = i2cAddress;
+    this.bus = i2cbus.openSync(1);
   }
 
+  /**
+   * Abstraction for i2c library
+   * @param buf Data to read 
+   */
+  protected readBuffer(buf: Buffer) {
+    this.bus.i2cReadSync(this.devAddr, buf.length, buf);
+  }
+
+  /**
+   * Abstraction for i2c library
+   * @param buf Data to write 
+   */
+  protected writeBuffer(buf: Buffer) {
+    this.bus.i2cWriteSync(this.devAddr, buf.length, buf);
+  }
+
+  /**
+   * Formatter for user-friendly time interval output
+   * @param ticks Time interval, in ticks
+   * @returns Array of time strings
+   */
   protected timeParts(ticks: bigint) {
     const k = BigInt(1000);
     const units = ['ns', 'us', 'ms', 's'];
@@ -59,10 +72,12 @@ class BaseDevice {
     return parts;
   }
 
+  /** Internal timer start */
   protected startTimer() {
     this.nsTime = hrtime.bigint();
   }
 
+  /** Internal timer end */
   protected endTimer() {
     let ticks = hrtime.bigint() - this.nsTime;
     this.nsCount++;
@@ -77,6 +92,12 @@ class BaseDevice {
     );
   }
 
+  /**
+   * Helper method to chunk long data payloads into manageable chunks
+   * @param arr Full payload
+   * @param chunkSize Maximum chunk size
+   * @returns Resulting payload array
+   */
   protected chunkArray<T>(arr: T[], chunkSize: number) : T[][] {
     // Shortcut for truncate decimals
     const chunkCount = (((arr.length - 1) / chunkSize) | 0) + 1;
@@ -91,16 +112,27 @@ class BaseDevice {
     return result;
   }
 
+  /**
+   * Read a single byte from the device
+   * @param register Register to read
+   * @returns Register value
+   */
   readByte(register: number) {
     return this.readBlock(register, 1)[0];
   }
   
+  /**
+   * Read a continuous block of data from the device
+   * @param register Register to read
+   * @param size Number of bytes to read
+   * @returns Data from device
+   */
   readBlock(register: number, size: number) {
     this.startTimer();
     const buf = Buffer.alloc(size);
 
-    this.i2c.write(Buffer.from([register]), 1);
-    this.i2c.read(buf, size);
+    this.writeBuffer(Buffer.from([register]));
+    this.readBuffer(buf);
 
     const result = [...buf];
     this.log.trace(`${style('READ', 32)} (${hex(register)}): ${hex(result)}`);
@@ -109,10 +141,20 @@ class BaseDevice {
     return result;
   }
 
+  /**
+   * Write a single byte to the device
+   * @param register Register to write
+   * @param byte Value to write
+   */
   writeByte(register: number, byte: number) {
     this.writeBlock(register, [byte]);
   }
 
+  /**
+   * Write a continuous block of data to the device
+   * @param register Register to write to
+   * @param data Data to write
+   */
   writeBlock(register: number, data: number[]) {
     this.startTimer();
     const chunks = this.chunkArray(data, this.MAX_LEN);
@@ -128,7 +170,7 @@ class BaseDevice {
       const buf = Buffer.from(data);
 
       this.log.trace(`${style('WRITE', 33)} (${hex(data[0])}): ${hex(chunk)}`);
-      this.i2c.write(buf, buf.length);
+      this.writeBuffer(buf);
     }
     this.endTimer();
   }
