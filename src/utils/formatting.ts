@@ -16,3 +16,12 @@ export function hex(input: number | number[]) {
     .map(x => `0x${x.toString(16).toUpperCase().padStart(2, '0')}`)
     .join(' ');
 }
+
+/** Output byte(s) as binary strings
+ * @param input Byte or array of bytes
+ */
+export function bin(input: number | number[]) {
+  return (Array.isArray(input) ? input : [input])
+    .map(x => `b${x.toString(2).toUpperCase().padStart(8, '0')}`)
+    .join(' ');
+}
