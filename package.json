@@ -1,13 +1,13 @@
 {
   "name": "pi-gadgets",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "description": "Simple set of node tools for interacting with some common pi addons",
   "main": "index.js",
   "scripts": {
     "build": "tsc",
     "local": "tsc -w",
-    "test": "tsc && node build/tests/pwm-driver.js",
-    "testc": "node build/tests/pwm-driver.js",
+    "test": "tsc && node build/tests/oled-text.js",
+    "testc": "node build/tests/oled-text.js",
     "clean": "rm -rf build/ out/",
     "link": "tsc && mkdir -p out/lib && cp package.json out/ && cp -r build/src/* out/lib/ && cd out/ && npm link",
     "prerelease": "rm -rf build/ out/ && tsc && mkdir -p out/lib && cp package.json out/ && cp LICENSE out/ && cp -r build/src/* out/lib/ && npm publish --tag next out/"
@@ -22,14 +22,14 @@
     "url": "https://github.com/kccarbone/pi-gadgets/issues"
   },
   "homepage": "https://github.com/kccarbone/pi-gadgets#readme",
-  "devDependencies": {
-    "@types/i2c-bus": "^5.1.2",
-    "@types/node": "^20.10.6",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
-  },
   "dependencies": {
     "bark-logger": "^1.0.0",
     "i2c-bus": "^5.2.3"
+  },
+  "devDependencies": {
+    "@types/i2c-bus": "^5.1.2",
+    "@types/node": "^20.11.16",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   }
 }

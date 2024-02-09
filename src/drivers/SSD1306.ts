@@ -52,6 +52,11 @@ export enum COLOR {
   INVERT = 2
 }
 
+export enum ORIENTATION {
+  NORMAL = 0,
+  UPSIDEDOWN = 1
+}
+
 export enum ADDR_MODE {
   HORIZONTAL = 0,
   VERTICAL = 1,
@@ -78,7 +83,7 @@ export enum PIN_MODE {
   ALTERNATIVE = 18
 }
 
-export enum REMAP_MODE {
+export enum PIN_REMAP {
   DISABLE = 2,
   ENABLE = 34
 }
@@ -105,7 +110,7 @@ export enum INTERVAL {
   FRAMES_2 = 7
 }
 
-class Rect {
+export class Rect {
   public readonly w: number;
   public readonly h: number;
   public readonly x: number;
@@ -117,6 +122,15 @@ class Rect {
     this.x = x;
     this.y = y;
   }
+}
+
+export interface Font {
+  name: string,
+  monospace: boolean,
+  width: number,
+  height: number,
+  fontData: number[],
+  lookup: string[]
 }
 
 class SSD1306 {
@@ -154,11 +168,11 @@ class SSD1306 {
     this.setDisplayEnabled(false);
     this.setAddressMode(ADDR_MODE.HORIZONTAL);
     this.setStartLine(0);
-    this.setSegMode(SEG_MODE.COL127);
+    this.setSegMode(SEG_MODE.COL0);
     this.setMuxRatio(this.bounds.h - 1);
-    this.setComOutput(SCAN_DIR.REMAPPED);
+    this.setComOutput(SCAN_DIR.NORMAL);
     this.setDisplayOffset(0);
-    this.setComOptions(PIN_MODE.SEQUENTIAL, REMAP_MODE.DISABLE);
+    this.setComOptions(PIN_MODE.SEQUENTIAL, PIN_REMAP.DISABLE);
     this.setDisplayClockDivider(1, 8);
     this.setPrechargeTiming(1, 15);
     this.setComDeselect(DESEL_LEVEL.mV_830);
@@ -173,6 +187,18 @@ class SSD1306 {
   /** Enable or disable the device */
   setDisplayEnabled(enabled: boolean) {
     this.device.writeByte(COMMAND_BYTE, SET_DISP | (~~enabled));
+  }
+
+  /** Set the orientation of the display */
+  setDisplayOrientation(orientation: ORIENTATION) {
+    if (orientation == ORIENTATION.NORMAL) {
+      this.setSegMode(SEG_MODE.COL0);
+      this.setComOutput(SCAN_DIR.NORMAL);
+    }
+    else {
+      this.setSegMode(SEG_MODE.COL127);
+      this.setComOutput(SCAN_DIR.REMAPPED);
+    }
   }
 
   /** Enable or disable the charge pump regulator */
@@ -191,7 +217,7 @@ class SSD1306 {
   }
 
   /** Set COM output options */
-  setComOptions(pinMode: PIN_MODE, remapMode: REMAP_MODE) {
+  setComOptions(pinMode: PIN_MODE, remapMode: PIN_REMAP) {
     this.device.writeBlock(COMMAND_STREAM, [SET_COM_OPTS, (pinMode | remapMode)]);
   }
 
@@ -305,7 +331,6 @@ class SSD1306 {
   /** Draw a single pixel
    * @param x X position of pixel
    * @param y Y position of pixel
-   * @param color Color of this pixel 
    */
   drawPixel(x: number, y: number, color = COLOR.WHITE) {
     if (x < 0 || y < 0 || x >= this.bounds.w || y >= this.bounds.h) {
@@ -339,6 +364,55 @@ class SSD1306 {
     }
   }
 
+  /** Draw a simple rectangle
+   * @param x1 Starting corner
+   * @param y1 Starting corner
+   * @param x2 Ending corner
+   * @param y2 Ending corner
+   */
+  drawRect(x1: number, y1: number, x2: number, y2: number, color = COLOR.WHITE) {
+    for (let x=x1; x<=x2; x++){
+      for (let y=y1; y<=y2; y++){
+        this.drawPixel(x, y, color);
+      }
+    }
+  }
+  
+  /** Draw a horizontal line 
+   * @param y Position of the line
+   */
+  drawHLine(y: number, color = COLOR.WHITE) {
+    this.drawRect(this.bounds.x, y, this.bounds.w - 1, y, color);
+  }
+  
+  /** Draw a vertical line
+   * @param x Position of the line
+   */
+  drawVLine(x: number, color = COLOR.WHITE) {
+    this.drawRect(x, this.bounds.y, x, this.bounds.h - 1, color);
+  }
+
+  /** Draw text using a font pack
+   * @param x Starting coordinate for the text
+   * @param y Starting coordinate for the text
+   * @param text Text to draw
+   * @param font Font from a monochrome font pack
+   */
+  drawText(x: number, y: number, text: string, font: Font, color = COLOR.WHITE) {
+    for (let i = 0; i < text.length; i++) {
+      const cIndex = font.lookup.indexOf(text[i]) * font.width;
+      const cBytes = font.fontData.slice(cIndex, cIndex + font.width);
+
+      for (let cx = 0; cx < font.width; cx++) {
+        for (let cy = 0; cy < font.height; cy++) {
+          if (cBytes[cx] & (1 << cy)) {
+            this.drawPixel((x + cx) + (i * (font.width - 0)), y + cy, color);
+          }
+        }
+      }
+    }
+  }
+
   /** Push the contents of the display buffer to the device */
   update() {
     log.debug(`Updating display ${this.deviceId}`);
@@ -349,7 +423,6 @@ class SSD1306 {
     const data = new Array(512).fill(0b00000000);
 
     this.buffer.fill(0);
-    //this.setWriteContext(this.bounds);
     this.device.writeBlock(DATA_STREAM, data);
   }
 
@@ -363,7 +436,6 @@ class SSD1306 {
   test() {
     const data = new Array(512).fill(0b00000001);
 
-    //this.setWriteContext(this.bounds);
     this.device.writeBlock(DATA_STREAM, data);
   }
 
