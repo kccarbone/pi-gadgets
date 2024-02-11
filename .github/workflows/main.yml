@@ -19,6 +19,7 @@ jobs:
       - name: Build library
         run: |
           npm run clean
+          npm install
           npm run build
       - name: Pack library
         id: pack
