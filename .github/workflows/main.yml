@@ -1,0 +1,43 @@
+name: CI
+
+on: 
+  push:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: latest
+      - name: Build library
+        run: |
+          npm run clean
+          npm run build
+      - name: Pack library
+        id: pack
+        run: |
+          mkdir -p out/lib
+          cp package.json out/
+          cp LICENSE out/
+          cp -r build/src/* out/lib/
+          npm pack out/
+          echo "pkgFile=$(find *.tgz)" >> "$GITHUB_OUTPUT"
+      - name: Test out
+        run: |
+          echo "./${{ steps.pack.outputs.pkgFile }}"
+      - name: Publish to npm
+        id: publish
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          dry-run: true
+          strategy: all
+          package: ./${{ steps.pack.outputs.pkgFile }}
+          access: public
+          token: ${{ secrets.NPM_TOKEN }}

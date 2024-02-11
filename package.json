@@ -1,10 +1,16 @@
 {
   "name": "pi-gadgets",
-  "version": "0.1.1",
+  "version": "1.0.0-beta.3",
   "description": "Simple set of node tools for interacting with some common pi addons",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "local": "tsc -w",
+    "test": "tsc && node build/tests/oled-text.js",
+    "testc": "node build/tests/oled-text.js",
+    "clean": "rm -rf build/ out/",
+    "link": "tsc && mkdir -p out/lib && cp package.json out/ && cp -r build/src/* out/lib/ && cd out/ && npm link",
+    "prerelease": "rm -rf build/ out/ && tsc && mkdir -p out/lib && cp package.json out/ && cp LICENSE out/ && cp -r build/src/* out/lib/ && npm publish --tag next out/"
   },
   "repository": {
     "type": "git",
@@ -17,11 +23,13 @@
   },
   "homepage": "https://github.com/kccarbone/pi-gadgets#readme",
   "dependencies": {
-    "i2c": "^0.2.5",
-    "i2c-bus": "^5.2.2",
-    "lodash": "^4.17.21",
-    "node-consolog": "^1.0.1",
-    "oled-font-pack": "^1.0.1",
-    "rpio": "^2.4.2"
+    "bark-logger": "^1.0.0",
+    "i2c-bus": "^5.2.3"
+  },
+  "devDependencies": {
+    "@types/i2c-bus": "^5.1.2",
+    "@types/node": "^20.11.16",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   }
 }
