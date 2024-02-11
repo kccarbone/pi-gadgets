@@ -115,47 +115,61 @@ class BaseDevice {
   /**
    * Read a single byte from the device
    * @param register Register to read
+   * @param failOnError Throw error if the operation fails
    * @returns Register value
    */
-  readByte(register: number) {
-    return this.readBlock(register, 1)[0];
+  readByte(register: number, failOnError = false) {
+    return this.readBlock(register, 1, failOnError)[0];
   }
   
   /**
    * Read a continuous block of data from the device
    * @param register Register to read
    * @param size Number of bytes to read
+   * @param failOnError Throw error if the operation fails
    * @returns Data from device
    */
-  readBlock(register: number, size: number) {
+  readBlock(register: number, size: number, failOnError = false) {
     this.startTimer();
     const buf = Buffer.alloc(size);
 
-    this.writeBuffer(Buffer.from([register]));
-    this.readBuffer(buf);
+    try {
+      this.writeBuffer(Buffer.from([register]));
+      this.readBuffer(buf);
+      const result = [...buf];
+      this.log.trace(`${style('READ', 32)} (${hex(register)}): ${hex(result)}`);
+      this.endTimer();
 
-    const result = [...buf];
-    this.log.trace(`${style('READ', 32)} (${hex(register)}): ${hex(result)}`);
-    this.endTimer();
+      return result;
+    }
+    catch (err) {
+      this.log.error(`Read failed (device:${hex(this.devAddr)}, register: ${hex(register)}): ${err}`);
+      this.endTimer();
 
-    return result;
+      if (failOnError)
+        throw err;
+      else
+        return new Array(size).fill(0) as number[];
+    }
   }
 
   /**
    * Write a single byte to the device
    * @param register Register to write
    * @param byte Value to write
+   * @param failOnError Throw error if the operation fails
    */
-  writeByte(register: number, byte: number) {
-    this.writeBlock(register, [byte]);
+  writeByte(register: number, byte: number, failOnError = false) {
+    this.writeBlock(register, [byte], failOnError);
   }
 
   /**
    * Write a continuous block of data to the device
    * @param register Register to write to
    * @param data Data to write
+   * @param failOnError Throw error if the operation fails
    */
-  writeBlock(register: number, data: number[]) {
+  writeBlock(register: number, data: number[], failOnError = false) {
     this.startTimer();
     const chunks = this.chunkArray(data, this.MAX_LEN);
 
@@ -163,16 +177,25 @@ class BaseDevice {
       this.log.trace(`Message size: ${data.length} bytes. Sending in ${chunks.length} chunks...`);
     }
 
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      const offset = i * this.MAX_LEN + register;
-      const data = [(this.autoInc ? offset : register), ...chunk];
-      const buf = Buffer.from(data);
+    try {
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const offset = i * this.MAX_LEN + register;
+        const data = [(this.autoInc ? offset : register), ...chunk];
+        const buf = Buffer.from(data);
 
-      this.log.trace(`${style('WRITE', 33)} (${hex(data[0])}): ${hex(chunk)}`);
-      this.writeBuffer(buf);
+        this.log.trace(`${style('WRITE', 33)} (${hex(data[0])}): ${hex(chunk)}`);
+        this.writeBuffer(buf);
+      }
+      this.endTimer();
     }
-    this.endTimer();
+    catch (err) {
+      this.log.error(`Write failed (device:${hex(this.devAddr)}, register: ${hex(register)}): ${err}`);
+      this.endTimer();
+
+      if (failOnError)
+        throw err;
+    }
   }
 }
 

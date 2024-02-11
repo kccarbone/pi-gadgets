@@ -1,4 +1,3 @@
-import { env } from 'node:process';
 import { getLogger } from 'bark-logger';
 import BaseDevice from '../base';
 import { hex } from '../utils/formatting';
@@ -10,6 +9,8 @@ import { setBit } from '../utils/bytelib';
  * Datasheet:
  *   https://www.nxp.com/docs/en/data-sheet/PCA9685.pdf
  */
+
+const log = getLogger('PCA9685');
 
 enum REGISTER {
   MODE1 = 0x00,
@@ -39,13 +40,12 @@ enum MODE2 {
   INVRT = 4
 }
 
-class PCA9685 {
-  private log = getLogger('PCA9685');
+export class Device {
   private device: BaseDevice;
   private settings: number[] = [];
 
   constructor(i2cAddress = 0x40) {
-    this.log.debug(`Init PCA9685 (${hex(i2cAddress)})`);
+    log.debug(`Init PCA9685 (${hex(i2cAddress)})`);
     this.device = new BaseDevice(i2cAddress);
     this.settings[REGISTER.MODE1] = this.device.readByte(REGISTER.MODE1);
     this.settings[REGISTER.MODE2] = this.device.readByte(REGISTER.MODE2);
@@ -73,5 +73,3 @@ class PCA9685 {
   }
 
 }
-
-export default PCA9685;

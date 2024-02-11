@@ -8,7 +8,7 @@ const log = new Logger('oled');
 config.threshold = env.LOGLEVEL ?? Levels.TRACE;
 
 log.info('Starting test');
-const chip = new SSD1306(128, 32);
+const chip = new SSD1306.Device(128, 32);
 
 log.info('initializing...');
 chip.initDefault();

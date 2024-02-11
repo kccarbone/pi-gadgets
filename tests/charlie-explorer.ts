@@ -1,13 +1,14 @@
 import { Logger } from 'bark-logger';
-import { FL3731, SETTING, OPERATING_MODE } from '../src';
+import { FL3731 } from '../src';
 import InteractiveSession from '../src/utils/interactive';
+const { Device, SETTING, OPERATING_MODE } = FL3731;
 
 const log = new Logger('charlie-explorer');
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 const hex = (num: number) => num.toString(16).toUpperCase().padStart(2, '0');
 const style = (str: string, ...codes: string[]) => `\x1b[${codes.join(';')}m${str}\x1b[0m`;
 
-const chip = new FL3731();
+const chip = new Device();
 let frame = 0, index = 0, bright = 0;
 
 const session = new InteractiveSession();

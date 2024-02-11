@@ -1,4 +1,3 @@
-import { env } from 'node:process';
 import { getLogger } from 'bark-logger';
 import BaseDevice from '../base';
 
@@ -8,6 +7,8 @@ import BaseDevice from '../base';
  * Datasheet:
  *   https://www.lumissil.com/assets/pdf/core/IS31FL3731_DS.pdf
  */
+
+const log = getLogger('FL3731');
 
 const FRAME_REGISTER = 0xfd;
 const SETTINGS_FRAME = 0x0b;
@@ -41,7 +42,7 @@ export enum OPERATING_MODE {
 
 const bit = (bool: boolean) => (bool ? 1 : 0);
 
-class FL3731 {
+export class Device {
   private device: BaseDevice;
   private curFrame = 0;
   private curSetting = new Array(12).fill(-1);
@@ -218,7 +219,4 @@ class FL3731 {
     this.setFrame(frame);
     this.device.writeByte(OFFSET_PWM + channel, pwm);
   }
-
 }
-
-export default FL3731;

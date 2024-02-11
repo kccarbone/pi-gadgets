@@ -1,4 +1,3 @@
-import { env } from 'node:process';
 import { getLogger } from 'bark-logger';
 import BaseDevice from '../base';
 import { hex } from '../utils/formatting';
@@ -133,7 +132,7 @@ export interface Font {
   lookup: string[]
 }
 
-class SSD1306 {
+export class Device {
   /* 
   * TODO:
   *   - Fix hardcoded width/height
@@ -165,28 +164,34 @@ class SSD1306 {
 
   /** Initialize device with default settings */
   initDefault() {
-    this.setDisplayEnabled(false);
-    this.setAddressMode(ADDR_MODE.HORIZONTAL);
-    this.setStartLine(0);
-    this.setSegMode(SEG_MODE.COL0);
-    this.setMuxRatio(this.bounds.h - 1);
-    this.setComOutput(SCAN_DIR.NORMAL);
-    this.setDisplayOffset(0);
-    this.setComOptions(PIN_MODE.SEQUENTIAL, PIN_REMAP.DISABLE);
-    this.setDisplayClockDivider(1, 8);
-    this.setPrechargeTiming(1, 15);
-    this.setComDeselect(DESEL_LEVEL.mV_830);
-    this.setContrast(256);
-    this.setAllOn(false);
-    this.setInverseMode(false);
-    this.setChargePumpEnabled(true);
-    this.setDisplayEnabled(true);
-    this.setWriteContext(this.bounds);
+    try {
+      this.setDisplayEnabled(false, true);
+      this.setAddressMode(ADDR_MODE.HORIZONTAL);
+      this.setStartLine(0);
+      this.setSegMode(SEG_MODE.COL0);
+      this.setMuxRatio(this.bounds.h - 1);
+      this.setComOutput(SCAN_DIR.NORMAL);
+      this.setDisplayOffset(0);
+      this.setComOptions(PIN_MODE.SEQUENTIAL, PIN_REMAP.DISABLE);
+      this.setDisplayClockDivider(1, 8);
+      this.setPrechargeTiming(1, 15);
+      this.setComDeselect(DESEL_LEVEL.mV_830);
+      this.setContrast(256);
+      this.setAllOn(false);
+      this.setInverseMode(false);
+      this.setChargePumpEnabled(true);
+      this.setDisplayEnabled(true);
+      this.setWriteContext(this.bounds);
+    }
+    catch (err) {
+      log.fatal('Failed to initialize display! Check hardware');
+      process.exit(50);
+    }
   }
 
   /** Enable or disable the device */
-  setDisplayEnabled(enabled: boolean) {
-    this.device.writeByte(COMMAND_BYTE, SET_DISP | (~~enabled));
+  setDisplayEnabled(enabled: boolean, failOnError = false) {
+    this.device.writeByte(COMMAND_BYTE, SET_DISP | (~~enabled), failOnError);
   }
 
   /** Set the orientation of the display */
@@ -440,5 +445,3 @@ class SSD1306 {
   }
 
 }
-
-export default SSD1306;

@@ -41,9 +41,3 @@ jobs:
           package: ./${{ steps.pack.outputs.pkgFile }}
           access: public
           token: ${{ secrets.NPM_TOKEN }}
-      - if: ${{ steps.publish.outputs.type }}
-        name: Publish GitHub release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.publish.outputs.version }}
-          files: ./${{ steps.pack.outputs.pkgFile }}

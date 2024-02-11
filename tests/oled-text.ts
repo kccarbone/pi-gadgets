@@ -1,16 +1,17 @@
 import { env } from 'node:process';
 import { Logger, Levels, config } from 'bark-logger';
-import { SSD1306, Font } from '../src';
+import { SSD1306 } from '../src';
 //import fonts from 'oled-font-pack';
 const fonts: any = {};
 
+const { Device } = SSD1306;
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 const log = new Logger('oled-text');
 config.threshold = env.LOGLEVEL ?? Levels.DEBUG;
 
 function getFont(fontName: string) {
   try {
-    const found = fonts[fontName] as Font;
+    const found = fonts[fontName] as SSD1306.Font;
     
     if (!found)
       throw new Error('Font not found');
@@ -19,12 +20,12 @@ function getFont(fontName: string) {
   }
   catch (err) {
     log.error(`Unable to load font '${fontName}': ${err}`);
-    return fonts.oled_5x7 as Font;
+    return fonts.oled_5x7 as SSD1306.Font;
   }
 }
 
 log.info('Starting test');
-const chip = new SSD1306(128, 32);
+const chip = new Device(128, 32);
 
 log.info('initializing...');
 chip.initDefault();

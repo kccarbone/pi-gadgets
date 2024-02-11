@@ -1,3 +1,4 @@
 export { default as BaseDevice } from './base';
-export { default as FL3731, SETTING, OPERATING_MODE } from './drivers/FL3731';
-export { default as SSD1306, Font } from './drivers/SSD1306';
+export * as FL3731 from './drivers/FL3731';
+export * as PCA9685 from './drivers/PCA9685';
+export * as SSD1306 from './drivers/SSD1306';

@@ -1,7 +1,7 @@
 import { env, argv, exit } from 'node:process';
 import { Logger, Levels, config } from 'bark-logger';
-import { FL3731, SETTING, OPERATING_MODE } from '../src';
-
+import { FL3731 } from '../src';
+const { Device, SETTING } = FL3731;
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 const log = new Logger('charlie');
@@ -14,7 +14,7 @@ if (argv.length > 2) {
 log.error(`test ${JSON.stringify(argv)}`);
 
 log.info('Starting test');
-const chip = new FL3731();
+const chip = new Device();
 
 log.info('setting mode');
 chip.disableDevice();
