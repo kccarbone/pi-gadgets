@@ -37,7 +37,6 @@ jobs:
         id: publish
         uses: JS-DevTools/npm-publish@v3
         with:
-          dry-run: true
           strategy: all
           package: ./${{ steps.pack.outputs.pkgFile }}
           access: public
