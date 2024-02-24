@@ -1,8 +1,9 @@
 {
   "name": "pi-gadgets",
-  "version": "1.0.0-beta.3",
+  "version": "1.0.0",
   "description": "Simple set of node tools for interacting with some common pi addons",
-  "main": "index.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
     "build": "tsc",
     "local": "tsc -w",
