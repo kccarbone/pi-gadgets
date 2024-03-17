@@ -5,6 +5,7 @@ import { sleep } from '../src/utils/timing';
 
 const log = new Logger('base');
 config.threshold = env.LOGLEVEL ?? Levels.TRACE;
+let exited = false;
 
 const twoByte = (val: number) => [val >> 8, val & 0xff];
 
@@ -15,17 +16,17 @@ const FUNCTION_LENGTH = 0x03;
 const FUNCTION_DATA = 0x04;
 const FUNCTION_SHOW = 0x05;
 
-const PIN_OUTPUT = 15;
+const PIN_OUTPUT = 16;
 
 // Testing different transmission speeds...
 const tx_speed = 50; // kHz
 
 
 log.info('Connecting to device...');
-const device = new BaseDevice(0x60, tx_speed);
+const device = new BaseDevice(0x49, tx_speed);
 //init();
 
-const stringLength = 100;
+const stringLength = 2;
 const previous = { index: -1 };
 
 // 1 pixel x 3 channels (RGB) + 2 for the "start index"
@@ -43,7 +44,7 @@ const buffer = Buffer.alloc(5, 0);
 //log.info(`output: ${JSON.stringify(out)}`);
 
 const colors1 = [
-  [10, 0, 15]
+  [10, 10, 10]
 ];
 
 const colors2 = [
@@ -62,13 +63,13 @@ const colors2 = [
   await init();
 
   let ind = 0;
-  while (true) {
-    if (ind >= stringLength - 4) {
+  while (!exited) {
+    if (ind >= stringLength) {
       ind = 0;
     }
     const color = colors1[ind % colors1.length];
     single(ind, color[0], color[1], color[2]);
-    await sleep(30);
+    await sleep(200);
     ind++;
   }
 
@@ -101,9 +102,16 @@ function show() {
   device.writeBlock(MODULE_NEOPIXEL, [FUNCTION_SHOW]);
 }
 
+// TODO: fix chunked update
+function clear() {
+  const allEmpty = Buffer.alloc((stringLength * 3) + 2, 0);
+  device.writeBlock(MODULE_NEOPIXEL, [FUNCTION_DATA, ...allEmpty]);
+  device.writeBlock(MODULE_NEOPIXEL, [FUNCTION_SHOW]);
+}
+
 
 function single(index: number, red: number, green: number, blue: number) {
-  log.debug(`previous: ${previous.index}`)
+  log.debug(`previous: ${previous.index}`);
   if (previous.index >= 0) {
     setStart(previous.index);
     setColor(0, 0, 0);
@@ -122,3 +130,16 @@ async function reset() {
   device.writeByte(0, 0x7f);
   await sleep(100);
 }
+
+process.on('SIGINT', async () => {
+  exited = true;
+  await sleep(100);
+  if (previous.index >= 0) {
+    setStart(previous.index);
+    setColor(0, 0, 0);
+    update();
+    show();
+  }
+  await sleep(100);
+  exit(0);
+});
