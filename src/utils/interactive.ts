@@ -2,6 +2,8 @@ import { stdin, stdout, exit } from 'node:process';
 
 const MOD_SHIFT = [49,59,50];
 const KEY_INTERRUPT = [[3]];
+const KEY_ENTER = [[13]];
+const KEY_SPACEBAR = [[32]];
 const KEY_UP =    [[27,91,65],[27,79,65]];
 const KEY_DOWN =  [[27,91,66],[27,79,66]];
 const KEY_RIGHT = [[27,91,67],[27,79,67],[27,91,...MOD_SHIFT,67]];
@@ -54,6 +56,14 @@ class InteractiveSession {
 
   on(condition: (data: number[]) => boolean, callback: Function) {
     this._callbacks.push({ condition, callback });
+  }
+
+  onEnterKey(callback: Function) {
+    this.on(x => keyMatch(x, KEY_ENTER), callback);
+  }
+
+  onSpacebar(callback: Function) {
+    this.on(x => keyMatch(x, KEY_SPACEBAR), callback);
   }
 
   onArrowUp(callback: Function) {
