@@ -45,15 +45,15 @@ function progBar(ratio: number, fillColor = 44, backColor = 100) {
 function update() {
   session.overwriteLine(`[${style('Updating', '33')}]       `);
 
-  const cellV = (Math.ceil(batt.getCellVoltage() * 100) / 100).toString().padEnd(4, '0');
+  const cellV = Math.ceil(batt.getCellVoltage() * 100) / 100;
   const soc = Math.ceil(batt.getSOC());
   const crate = Math.floor(batt.getChargeRate());
 
-  const cellVLabel = `\u{1F539} ${style(`${cellV} V`, '34;1')}`;
-  const socLabel = `\u{1F50B} ${style(`${soc}%`, '32')}`;
+  const cellVLabel = `\u{1F539} ${style(`${cellV.toString().padEnd(4, '0')} V`, '34;1')}`;
+  const socLabel = `\u{1F50B} ${style(`${soc.toString().padStart(2, ' ')}%`, '32')}`;
   const crateLabel = (crate > 0)
-    ? `\u{1F50C} ${style(`${crate}%/hr`, '33')}`
-    : `\u{1FAAB} ${style(`${crate * -1}%/hr`, '31')}`;
+    ? `\u{1F50C} ${style(`${crate}%/hr `, '33')}`
+    : `\u{1FAAB} ${style(`${crate * -1}%/hr `, '31')}`;
     const crateProg = (crate > 0)
     ? progBar(crate / 80, 43)
     : progBar((crate * -1) / 80, 41);

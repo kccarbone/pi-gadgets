@@ -1,53 +1,24 @@
 import { env, argv, exit } from 'node:process';
 import { Logger, Levels, config } from 'bark-logger';
-import { BaseDevice } from '../src';
+import { Device, PinMapping } from '../src/drivers/seesaw';
 import { sleep } from '../src/utils/timing';
+import { RGB, Pixel } from '../src/utils/color';
 
 const log = new Logger('base');
-config.threshold = env.LOGLEVEL ?? Levels.TRACE;
+config.threshold = env.LOGLEVEL ?? Levels.DEBUG;
 let exited = false;
 
-const twoByte = (val: number) => [val >> 8, val & 0xff];
-
-const MODULE_NEOPIXEL = 0x0e;
-const FUNCTION_PIN = 0x01;
-const FUNCTION_SPEED = 0x02;
-const FUNCTION_LENGTH = 0x03;
-const FUNCTION_DATA = 0x04;
-const FUNCTION_SHOW = 0x05;
-
-const PIN_OUTPUT = 16;
-
-// Testing different transmission speeds...
-const tx_speed = 50; // kHz
-
-
 log.info('Connecting to device...');
-const device = new BaseDevice(0x49, tx_speed);
-//init();
+const device = new Device(0x49);
 
-const stringLength = 2;
+const stringLength = 9;
 const previous = { index: -1 };
 
-// 1 pixel x 3 channels (RGB) + 2 for the "start index"
-const buffer = Buffer.alloc(5, 0);
-
-// First two bytes define the start index for pixels (MSB?)
-//buffer[0] = 0;
-//buffer[1] = 0;
-
-//buffer[2] = 50; // Pixel 1 Red
-//buffer[6] = 100; // Pixel 2 Green
-
-//const out = device.readModuleBlock(0, 2, 4);
-//const out = device.readModuleBlock(0, 1, 1);
-//log.info(`output: ${JSON.stringify(out)}`);
-
-const colors1 = [
-  [10, 10, 10]
+const colors1: RGB[] = [
+  [0, 20, 0]
 ];
 
-const colors2 = [
+const colors2: RGB[] = [
   [30, 20, 10],
   [30, 0, 0],
   [30, 15, 0],
@@ -72,74 +43,66 @@ const colors2 = [
     await sleep(200);
     ind++;
   }
-
 })();
 
 
 async function init() {
-  device.writeBlock(MODULE_NEOPIXEL, [FUNCTION_PIN, PIN_OUTPUT]);
+  device.setNeopixelPin(PinMapping.ATtinyXY6.PA2);
   await sleep(10);
-  device.writeBlock(MODULE_NEOPIXEL, [FUNCTION_LENGTH, ...twoByte(stringLength * 3)]);
-}
-
-function setStart(index: number) {
-  const addr = twoByte(index * 3);
-  buffer[0] = addr[0];
-  buffer[1] = addr[1];
-}
-
-function setColor(red: number, green: number, blue: number, offset = 0) {
-  buffer[(offset * 3) + 2] = red;
-  buffer[(offset * 3) + 3] = green;
-  buffer[(offset * 3) + 4] = blue;
-}
-
-function update() {
-  device.writeBlock(MODULE_NEOPIXEL, [FUNCTION_DATA, ...buffer]);
-}
-
-function show() {
-  device.writeBlock(MODULE_NEOPIXEL, [FUNCTION_SHOW]);
+  device.setNeopixelPixelCount(stringLength);
+  await sleep(10);
 }
 
 // TODO: fix chunked update
 function clear() {
-  const allEmpty = Buffer.alloc((stringLength * 3) + 2, 0);
-  device.writeBlock(MODULE_NEOPIXEL, [FUNCTION_DATA, ...allEmpty]);
-  device.writeBlock(MODULE_NEOPIXEL, [FUNCTION_SHOW]);
+  const allEmpty = new Array((stringLength * 3) + 2).fill(0);
+  const bri = 0;
+  allEmpty[4] = bri;
+  allEmpty[7] = bri;
+  allEmpty[10] = bri;
+  allEmpty[13] = bri;
+  allEmpty[16] = bri;
+  allEmpty[19] = bri;
+  allEmpty[22] = bri;
+  allEmpty[25] = bri;
+  allEmpty[28] = bri;
+  config.threshold = Levels.TRACE;
+  log.fatal('CLEARING...');
+  //device.writeBlock(MODULE_NEOPIXEL, [FUNCTION_DATA, ...allEmpty]);
+  //device.writeBlock(MODULE_NEOPIXEL, [FUNCTION_SHOW]);
 }
 
 
 function single(index: number, red: number, green: number, blue: number) {
   log.debug(`previous: ${previous.index}`);
   if (previous.index >= 0) {
-    setStart(previous.index);
-    setColor(0, 0, 0);
-    update();
+    device.setNeopixelStartIndex(previous.index);
+    device.setPixel([0, 0, 0]);
+    device.showNeopixels();
   }
 
-  setStart(index);
-  setColor(red, green, blue);
-  update();
-  show();
+  device.setNeopixelStartIndex(index);
+  device.setPixel([red, green, blue]);
+  device.showNeopixels();
   previous.index = index;
 }
 
 async function reset() {
   // Software reset!
-  device.writeByte(0, 0x7f);
+  //device.writeByte(0, 0x7f);
   await sleep(100);
 }
 
 process.on('SIGINT', async () => {
   exited = true;
-  await sleep(100);
+  await sleep(250);
   if (previous.index >= 0) {
-    setStart(previous.index);
-    setColor(0, 0, 0);
-    update();
-    show();
+    device.setNeopixelStartIndex(previous.index);
+    device.setPixel([0, 0, 0]);
+    device.showNeopixels();
   }
+  await sleep(100);
+  clear();
   await sleep(100);
   exit(0);
 });

@@ -42,3 +42,29 @@ export function bytesToInt(bytes: number[], signed = false) {
   // Evaluate as signed binary
   return parseInt(fullHex) | 0;
 }
+
+/** Convert an (unsigned) integer into an array of bytes
+ * @param value number of convert
+ * @param byteCount number of bytes in result array (up to 4)
+ */
+export function intToBytes(value: number, byteCount = 1) {
+  if (byteCount < 1 || byteCount > 4) {
+    throw new RangeError('intToBytes supports up to 4 bytes');
+  }
+
+  if (value < 0) {
+    throw new RangeError('intToBytes does not support negative (signed) numbers');
+  }
+
+  if (value >= (2 ** (byteCount * 8))) {
+    throw new RangeError(`value '${value}' does not fit into ${byteCount} bytes`);
+  }
+
+  const result = new Array(byteCount).fill(0);
+
+  for (let i = 1; i <= byteCount; i++){
+    result[i - 1] = (value >> ((byteCount - i) * 8)) & 0xff;
+  }
+
+  return result;
+}
