@@ -2,6 +2,7 @@ import { Worker } from 'node:worker_threads';
 import { hrtime } from 'node:process';
 import { getLogger } from 'bark-logger';
 import { style, hex } from './utils/formatting';
+import { chunkArray } from './utils/bytelib'; 
 import i2cbus from 'i2c-bus';
 
 // Todo:
@@ -93,26 +94,6 @@ class BaseDevice {
   }
 
   /**
-   * Helper method to chunk long data payloads into manageable chunks
-   * @param arr Full payload
-   * @param chunkSize Maximum chunk size
-   * @returns Resulting payload array
-   */
-  protected chunkArray<T>(arr: T[], chunkSize: number) : T[][] {
-    // Shortcut for truncate decimals
-    const chunkCount = (((arr.length - 1) / chunkSize) | 0) + 1;
-    const lastChunk = chunkCount - 1;
-    const result = new Array(chunkCount);
-
-    for (let i = 0; i < lastChunk; i++) {
-      result[i] = arr.slice((i * chunkSize), (i + 1) * chunkSize);
-    }
-    result[lastChunk] = arr.slice((lastChunk * chunkSize), arr.length);
-
-    return result;
-  }
-
-  /**
    * Read a single byte from the device
    * @param register Register to read
    * @param failOnError Throw error if the operation fails
@@ -171,7 +152,7 @@ class BaseDevice {
    */
   writeBlock(register: number, data: number[], failOnError = false) {
     this.startTimer();
-    const chunks = this.chunkArray(data, this.MAX_LEN);
+    const chunks = chunkArray(data, this.MAX_LEN);
 
     if (chunks.length > 1) {
       this.log.trace(`Message size: ${data.length} bytes. Sending in ${chunks.length} chunks...`);

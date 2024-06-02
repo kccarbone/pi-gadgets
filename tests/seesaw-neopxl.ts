@@ -14,6 +14,8 @@ const device = new Device(0x49);
 const stringLength = 9;
 const previous = { index: -1 };
 
+const OFF: RGB = [0, 0, 0];
+
 const colors1: RGB[] = [
   [0, 20, 0]
 ];
@@ -38,8 +40,8 @@ const colors2: RGB[] = [
     if (ind >= stringLength) {
       ind = 0;
     }
-    const color = colors1[ind % colors1.length];
-    single(ind, color[0], color[1], color[2]);
+
+    single(ind, colors1[ind % colors1.length]);
     await sleep(200);
     ind++;
   }
@@ -47,44 +49,37 @@ const colors2: RGB[] = [
 
 
 async function init() {
-  device.setNeopixelPin(PinMapping.ATtinyXY6.PA2);
-  await sleep(10);
-  device.setNeopixelPixelCount(stringLength);
+  device.initNeopixels(PinMapping.ATtinyXY6.PA2, stringLength);
   await sleep(10);
 }
 
 // TODO: fix chunked update
-function clear() {
-  const allEmpty = new Array((stringLength * 3) + 2).fill(0);
-  const bri = 0;
-  allEmpty[4] = bri;
-  allEmpty[7] = bri;
-  allEmpty[10] = bri;
-  allEmpty[13] = bri;
-  allEmpty[16] = bri;
-  allEmpty[19] = bri;
-  allEmpty[22] = bri;
-  allEmpty[25] = bri;
-  allEmpty[28] = bri;
-  config.threshold = Levels.TRACE;
+async function clear() {
   log.fatal('CLEARING...');
-  //device.writeBlock(MODULE_NEOPIXEL, [FUNCTION_DATA, ...allEmpty]);
-  //device.writeBlock(MODULE_NEOPIXEL, [FUNCTION_SHOW]);
+
+  all([10, 0, 0]);
+  await sleep(500);
+  all(OFF);
 }
 
 
-function single(index: number, red: number, green: number, blue: number) {
+function single(index: number, color: RGB) {
   log.debug(`previous: ${previous.index}`);
   if (previous.index >= 0) {
-    device.setNeopixelStartIndex(previous.index);
-    device.setPixel([0, 0, 0]);
+    device.setPixel(OFF, previous.index);
     device.showNeopixels();
   }
 
-  device.setNeopixelStartIndex(index);
-  device.setPixel([red, green, blue]);
+  device.setPixel(color, index);
   device.showNeopixels();
   previous.index = index;
+}
+
+function all(color: RGB) {
+  for (let i = 0; i < stringLength; i++) {
+    device.setPixel(color, i);
+  }
+  device.showNeopixels();
 }
 
 async function reset() {
@@ -97,12 +92,11 @@ process.on('SIGINT', async () => {
   exited = true;
   await sleep(250);
   if (previous.index >= 0) {
-    device.setNeopixelStartIndex(previous.index);
-    device.setPixel([0, 0, 0]);
+    device.setPixel(OFF, previous.index);
     device.showNeopixels();
   }
   await sleep(100);
-  clear();
+  await clear();
   await sleep(100);
   exit(0);
 });

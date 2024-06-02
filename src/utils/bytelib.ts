@@ -23,7 +23,7 @@ export function setBit (value: number, bitIndex: number, bitValue: boolean) {
  * @param bytes array of bytes in MSB order
  * @param signed parse as signed number
  */
-export function bytesToInt(bytes: number[], signed = false) {
+export function bytesToInt(bytes: number[], signed = false) : number {
   let arr = [...bytes];
 
   if (arr.length < 1 || arr.length > 4) {
@@ -47,7 +47,7 @@ export function bytesToInt(bytes: number[], signed = false) {
  * @param value number of convert
  * @param byteCount number of bytes in result array (up to 4)
  */
-export function intToBytes(value: number, byteCount = 1) {
+export function intToBytes(value: number, byteCount = 1) : number[] {
   if (byteCount < 1 || byteCount > 4) {
     throw new RangeError('intToBytes supports up to 4 bytes');
   }
@@ -65,6 +65,26 @@ export function intToBytes(value: number, byteCount = 1) {
   for (let i = 1; i <= byteCount; i++){
     result[i - 1] = (value >> ((byteCount - i) * 8)) & 0xff;
   }
+
+  return result;
+}
+
+/**
+ * Helper method to chunk long data payloads into manageable chunks
+ * @param arr Full payload
+ * @param chunkSize Maximum chunk size
+ * @returns Resulting payload array
+ */
+export function chunkArray<T>(arr: T[], chunkSize: number): T[][] {
+  // Shortcut for truncate decimals
+  const chunkCount = (((arr.length - 1) / chunkSize) | 0) + 1;
+  const lastChunk = chunkCount - 1;
+  const result = new Array(chunkCount);
+
+  for (let i = 0; i < lastChunk; i++) {
+    result[i] = arr.slice((i * chunkSize), (i + 1) * chunkSize);
+  }
+  result[lastChunk] = arr.slice((lastChunk * chunkSize), arr.length);
 
   return result;
 }

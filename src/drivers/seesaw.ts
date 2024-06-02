@@ -1,7 +1,7 @@
 import { getLogger } from 'bark-logger';
 import BaseDevice from '../base';
 import { RGB, Pixel } from '../utils/color';
-import { bytesToInt, intToBytes } from '../utils/bytelib';
+import { bytesToInt, intToBytes, chunkArray } from '../utils/bytelib';
 import { hex } from '../utils/formatting';
 
 /* seesaw
@@ -52,6 +52,7 @@ enum NEOPX {
 
 export class Device {
   private device: BaseDevice;
+  private chunkSize = 12;
   private npPin = 0;
   private npChannelCount = 0;
   private npStartIndex = 0;
@@ -66,25 +67,16 @@ export class Device {
     this.device = new BaseDevice(i2cAddress);
   }
 
-  private resetNeopixelState() {
-    this.npState = new Array((this.npChannelCount || 0) + 2).fill(0);
-  }
-
-  /** Set the output pin for neopixels
+  /** Configure device for controling a string of neopixels
    * @param pin hardware pin defined by the firmware running on-chip. See {@link PinMapping} using MTC-flashed device
+   * @param pixelCount number of pixels (aka. string length)
    */
-  setNeopixelPin(pin: number) {
+  initNeopixels(pin: number, pixelCount: number) {
     if (this.npPin !== pin) {
       log.debug(`Setting neopixel output pin to ${pin}`);
       this.device.writeBlock(REGISTER.NEOPIXEL, [NEOPX.PIN, pin]);
       this.npPin = pin;
     }
-  }
-
-  /** Set the number of pixels to control
-   * @param pixelCount number of pixels (aka. string length)
-   */
-  setNeopixelPixelCount(pixelCount: number) {
     // RGB pixels use 3 channels per logical pixel
     // TODO: Add support for different pixel types (eg. RGBW)
     const channelCount = pixelCount * this.cpp;
@@ -95,22 +87,8 @@ export class Device {
       this.npChannelCount = channelCount;
     }
 
-    this.resetNeopixelState();
-  }
-
-  /** Set the start index for the next show command
-   * @param startIndex the "address" (index) of the pixel to start with, between zero and pixelCount
-   */
-  setNeopixelStartIndex(startIndex: number) {
-    this.resetNeopixelState();
-
-    if (this.npStartIndex !== startIndex) {
-      log.debug(`Setting neopixel start index to ${startIndex}`);
-      const channelBytes = intToBytes((startIndex * this.cpp), 2);
-      this.npState![0] = channelBytes[0];
-      this.npState![1] = channelBytes[1];
-      this.npStartIndex = startIndex;
-    }
+    // Initialize a new buffer for pixel state
+    this.npState = new Array(this.npChannelCount || 0).fill(0);
   }
 
   /** Set the color of a single pixel
@@ -121,19 +99,20 @@ export class Device {
     const pixel = Pixel.fromRGB(color);
 
     if (this.npState === undefined) {
-      this.resetNeopixelState();
-    }
-
-    if (((offset + 1) * this.cpp) > this.npChannelCount) {
-      log.warn(`Unable to update pixel at index ${offset} because only ${this.npChannelCount} have been configured`);
+      log.warn('Neopixels have not been initialized!');
     }
     else {
-      log.debug(`Updating pixel at index: ${offset}`);
-
-      // TODO: Harcoding GRB order for now
-      this.npState![(offset * this.cpp) + 2] = pixel.G;
-      this.npState![(offset * this.cpp) + 3] = pixel.R;
-      this.npState![(offset * this.cpp) + 4] = pixel.B;
+      if (((offset + 1) * this.cpp) > this.npChannelCount) {
+        log.warn(`Unable to update pixel at index ${offset} because only ${this.npChannelCount} have been configured`);
+      }
+      else {
+        log.debug(`Updating pixel at index: ${offset}`);
+  
+        // TODO: Harcoding GRB order for now
+        this.npState[(offset * this.cpp) + 0] = pixel.G;
+        this.npState[(offset * this.cpp) + 1] = pixel.R;
+        this.npState[(offset * this.cpp) + 2] = pixel.B;
+      }
     }
   }
 
@@ -143,8 +122,21 @@ export class Device {
       log.warn('Neopixels have not been initialized!');
     }
     else {
+      // TODO: Optimize this by comparing buffer states and only sending data when needed
+      const chunks = chunkArray(this.npState, this.chunkSize);
       log.debug(`Writing ${this.npState.length} bytes of new neopixel data`);
-      this.device.writeBlock(REGISTER.NEOPIXEL, [NEOPX.DATA, ...this.npState]);
+
+      if (chunks.length > 1)
+        log.debug(`(sending in ${chunks.length} chunks)`);
+
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const startInd = i * this.chunkSize;
+        const header = intToBytes(startInd, 2);
+
+        this.device.writeBlock(REGISTER.NEOPIXEL, [NEOPX.DATA, ...header, ...chunk]);
+      }
+      
       this.device.writeBlock(REGISTER.NEOPIXEL, [NEOPX.SHOW]);
     }
   }
