@@ -140,6 +140,13 @@ export class Device {
       this.device.writeBlock(REGISTER.NEOPIXEL, [NEOPX.SHOW]);
     }
   }
+
+  /** Clears the internal display buffer for neopixels */
+  clearPixelBuffer() {
+    if (this.npState) {
+      this.npState.fill(0);
+    }
+  }
 }
 
 /** Pin mappings as defined by the megaTinyCore project:

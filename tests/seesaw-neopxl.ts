@@ -3,33 +3,27 @@ import { Logger, Levels, config } from 'bark-logger';
 import { Device, PinMapping } from '../src/drivers/seesaw';
 import { sleep } from '../src/utils/timing';
 import { RGB, Pixel } from '../src/utils/color';
+import { colorTest, demoReel } from './frames';
 
 const log = new Logger('base');
-config.threshold = env.LOGLEVEL ?? Levels.DEBUG;
+config.threshold = env.LOGLEVEL ?? Levels.INFO;
 let exited = false;
 
 log.info('Connecting to device...');
 const device = new Device(0x49);
 
-const stringLength = 9;
+const stringLength = 16;
 const previous = { index: -1 };
+const frameDelay = 150;
 
 const OFF: RGB = [0, 0, 0];
+const RED: RGB = [60, 0, 0];
+const GRN: RGB = [0, 30, 0];
+const BLU: RGB = [0, 0, 50];
+const YEL: RGB = [50, 20, 0];
+const MAG: RGB = [60, 0, 20];
+const WHT: RGB = [50, 40, 50];
 
-const colors1: RGB[] = [
-  [0, 20, 0]
-];
-
-const colors2: RGB[] = [
-  [30, 20, 10],
-  [30, 0, 0],
-  [30, 15, 0],
-  [0, 15, 0],
-  [0, 20, 10],
-  [0, 0, 20],
-  [30, 0, 7],
-  [10, 0, 15]
-];
 
 (async () => {
   await reset();
@@ -37,31 +31,37 @@ const colors2: RGB[] = [
 
   let ind = 0;
   while (!exited) {
-    if (ind >= stringLength) {
+    if (ind >= demoReel.length) {
       ind = 0;
     }
 
-    single(ind, colors1[ind % colors1.length]);
-    await sleep(200);
+    showFrame(demoReel[ind]);
+    await sleep(frameDelay);
     ind++;
   }
 })();
 
 
 async function init() {
-  device.initNeopixels(PinMapping.ATtinyXY6.PA2, stringLength);
+  device.initNeopixels(PinMapping.ATtinyXY6.PB3, stringLength);
   await sleep(10);
 }
 
-// TODO: fix chunked update
 async function clear() {
   log.fatal('CLEARING...');
 
-  all([10, 0, 0]);
-  await sleep(500);
+  await sleep(250);
   all(OFF);
+  await sleep(50);
 }
 
+function showFrame(frame: RGB[]) {
+  device.clearPixelBuffer();
+  for (let i = 0; i < frame.length; i++) {
+    device.setPixel(frame[i], i);
+  }
+  device.showNeopixels();
+}
 
 function single(index: number, color: RGB) {
   log.debug(`previous: ${previous.index}`);
