@@ -1,6 +1,6 @@
 import { env, argv, exit } from 'node:process';
 import { Logger, Levels, config } from 'bark-logger';
-import { BaseDevice } from '../src';
+import { Device } from '../src/drivers/PCA9685';
 import { setBit } from '../src/utils/bytelib';
 import { bin } from '../src/utils/formatting';
 
@@ -21,61 +21,13 @@ enum REGISTER {
 }
 
 log.info('Connecting to device...');
-const device = new BaseDevice(0x40);
+const device = new Device();
 
-let mode1 = device.readByte(REGISTER.MODE1);
-let mode2 = device.readByte(REGISTER.MODE2);
-log.info(`Initial mode setup: (MODE1) ${bin(mode1)} (MODE2) ${bin(mode2)}`);
+// Configure output
+device.setInternalPull(false);
+device.setInvert(true);
+device.setDisabledDriveMode(2);
+device.enable();
 
-// Set OUTDRV to open drain (0)
-mode2 = setBit(mode2, 2, false);
-
-// Set INVRT to inverted (1)
-mode2 = setBit(mode2, 4, true);
-
-// Set OUTNE mode to conditional (high-z for open-drain outputs)
-mode2 = setBit(mode2, 0, true);
-
-// Turn sleep mode OFF
-mode1 = setBit(mode1, 4, false);
-
-// Send changes to device
-device.writeByte(REGISTER.MODE2, mode2);
-device.writeByte(REGISTER.MODE1, mode1);
-
-mode1 = device.readByte(REGISTER.MODE1);
-mode2 = device.readByte(REGISTER.MODE2);
-log.info(`mode setup: (MODE1) ${bin(mode1)} (MODE2) ${bin(mode2)}`);
-
-// All LEDS
-
-// ON BYTE
-device.writeByte(0xfa, 0); // LSB
-device.writeByte(0xfb, 0); // MSB
-
-// OFF BYTE
-device.writeByte(0xfc, 8); // LSB
-device.writeByte(0xfd, 0); // MSB
-
-// All OFF
-//device.writeByte(0xfd, 0b10000);
-
-// LED9 ON
-device.writeByte(0x2a, 0); // LSB
-device.writeByte(0x2b, 0); // MSB
-
-// LED9 OFF
-device.writeByte(0x2c, 8); // LSB
-device.writeByte(0x2d, 0); // MSB
-
-// Read status
-device.readByte(0x2a);
-device.readByte(0x2b);
-device.readByte(0x2c);
-device.readByte(0x2d);
-
-device.readByte(0xa);
-device.readByte(0xb);
-device.readByte(0xc);
-device.readByte(0xd);
+device.updateAllOutputs(1);
 

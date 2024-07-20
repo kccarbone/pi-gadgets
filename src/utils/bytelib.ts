@@ -1,5 +1,18 @@
 /* Helpful functions for manipulating data streams */
 
+/** Returns a single bit within a byte
+ * @param value Single-byte number
+ * @param bitIndex Index of the bit to read (0-7)
+ * @returns true for "1", false for "0"
+ */
+export function getBit (value: number, bitIndex: number) {
+  if (bitIndex < 0 || bitIndex > 7) {
+    throw new RangeError('getBit only works for single byte (8-bit) values');
+  }
+
+  return !!(value & (1 << bitIndex));
+}
+
 /** Change a single bit in byte
  * @param value Original byte value
  * @param bitIndex Index of the bit to change (0-7)
