@@ -99,12 +99,12 @@ export class Device {
   /** AutoPlay mode: Automatically rotate through frames
    * @param frameStart (optional) The first frame in the rotation
    * @param framesToPlay (optional) The number of frames to loop through (starting with frameStart), 0 = all
-   * @param frameDelay (optional) Delay between frames (1-63) using x * 11ms, 0 = 64
+   * @param frameHold (optional) Time to stay on each frame (1-63) using x * 11ms, 0 = 64
    * @param loopCount (optional) Number of times to run the loop before stopping (1-7), 0 = unlimited
    */
-  setModeAutoPlay(frameStart = 0, framesToPlay = 0, frameDelay = 0, loopCount = 0) {
+  setModeAutoPlay(frameStart = 0, framesToPlay = 0, frameHold = 0, loopCount = 0) {
     this.writeSetting(SETTING.AUTO_PLAY_MODE, ((loopCount << 4) + framesToPlay));
-    this.writeSetting(SETTING.AUTO_PLAY_DELAY, frameDelay);
+    this.writeSetting(SETTING.AUTO_PLAY_DELAY, frameHold);
     this.writeSetting(SETTING.OPERATING_MODE, (OPERATING_MODE.AUTO_PLAY << 3) + frameStart);
   }
 
@@ -146,11 +146,11 @@ export class Device {
   /** Enable breath function
    * @param fadeIn Ramp up time (0-7) using 2^x * 26ms
    * @param fadeOut Ramp down time (0-7) using 2^x * 26ms
-   * @param extinguish (optional) Extinguish time (0-7) using 2^x * 3.5ms
+   * @param frameDelay (optional) Delay between frames (0-7) using 2^x * 3.5ms
    */
-  enableBreath(fadeIn: number, fadeOut: number, extinguish = 0) {
+  enableBreath(fadeIn: number, fadeOut: number, frameDelay = 0) {
     this.writeSetting(SETTING.BREATH_RAMP, ((fadeOut << 4) + fadeIn));
-    this.writeSetting(SETTING.BREATH_MODE, ((1 << 4) + extinguish));
+    this.writeSetting(SETTING.BREATH_MODE, ((1 << 4) + frameDelay));
   }
 
   /** Disable breath function */

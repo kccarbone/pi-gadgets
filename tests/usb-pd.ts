@@ -34,9 +34,9 @@ enum VOLTAGE {
   MODE_5V = 0x01,
   MODE_9V = 0x02,
   MODE_12V = 0x03,
-  MODE_15V = 0x04,
-  MODE_18V = 0x05,
-  MODE_20V = 0x06
+  MODE_15V = 0x08,
+  MODE_18V = 0x09,
+  MODE_20V = 0x0a
 }
 
 enum CURRENT {
@@ -104,7 +104,7 @@ const device = new BaseDevice(0x08);
 
   // Set mode
   log.debug('SET');
-  device.writeByte(REGISTER.OUTPUT_MODE, VOLTAGE.MODE_9V << 4);
+  device.writeByte(REGISTER.OUTPUT_MODE, VOLTAGE.MODE_20V << 4);
   await sleep(100);
   device.writeByte(REGISTER.SEND_CMD, COMMAND.SELECT_OUTPUT);
   await sleep(800);
