@@ -111,20 +111,30 @@ class BaseDevice {
    * @returns Data from device
    */
   readBlock(register: number, size: number, failOnError = false) {
+    this.writeBuffer(Buffer.from([register]));
+    return this.readRaw(size, failOnError);
+  }
+
+  /**
+   * Initiate a read operation
+   * @param size Number of bytes to read
+   * @param failOnError Throw error if the operation fails
+   * @returns Data from device
+   */
+  readRaw(size: number, failOnError = false) {
     this.startTimer();
     const buf = Buffer.alloc(size);
 
     try {
-      this.writeBuffer(Buffer.from([register]));
       this.readBuffer(buf);
       const result = [...buf];
-      this.log.trace(`${style('READ', 32)} (${hex(register)}): ${hex(result)}`);
+      this.log.trace(`${style('READ', 32)}: ${hex(result)}`);
       this.endTimer();
 
       return result;
     }
     catch (err) {
-      this.log.error(`Read failed (device:${hex(this.devAddr)}, register: ${hex(register)}): ${err}`);
+      this.log.error(`Read failed (device:${hex(this.devAddr)}: ${err}`);
       this.endTimer();
 
       if (failOnError)

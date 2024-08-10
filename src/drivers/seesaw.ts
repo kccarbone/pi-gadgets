@@ -3,6 +3,7 @@ import BaseDevice from '../base';
 import { RGB, Pixel } from '../utils/color';
 import { bytesToInt, intToBytes, chunkArray } from '../utils/bytelib';
 import { hex } from '../utils/formatting';
+import { sleep } from '../utils/timing';
 
 /* seesaw
  * Driver for Adafruit's wonderful seesaw platform
@@ -42,6 +43,25 @@ enum STATUS {
   SWRST   = 0x7f
 }
 
+enum GPIO {
+  DIRSET     = 0x02,
+  DIRCLR     = 0x03,
+  GPIO       = 0x04,
+  SET        = 0x05,
+  CLR        = 0x06,
+  TOGGLE     = 0x07,
+  INTENSET   = 0x08,
+  INTENCLR   = 0x09,
+  INTFLAG    = 0x0a,
+  PULLENSET  = 0x0b,
+  PULLENCLR  = 0x0c
+}
+
+enum PWM {
+  VALUE = 0x01,
+  FREQ  = 0x02
+}
+
 enum NEOPX {
   PIN    = 0x01,
   SPEED  = 0x02,
@@ -65,6 +85,51 @@ export class Device {
   constructor(i2cAddress = 0x49) {
     log.debug(`Init seesaw (${hex(i2cAddress)})`);
     this.device = new BaseDevice(i2cAddress);
+  }
+
+  protected async readRegister(reg1: number, reg2: number, length: number) {
+    this.device.writeByte(reg1, reg2);
+    await sleep(2);
+    const result = this.device.readRaw(length);
+    await sleep(2);
+    return result;
+  }
+
+  async getDeviceInfo() {
+    const hardwareID = await this.readRegister(REGISTER.STATUS, STATUS.HWID, 1);
+    const version = await this.readRegister(REGISTER.STATUS, STATUS.VERSION, 4);
+    const options = await this.readRegister(REGISTER.STATUS, STATUS.OPTIONS, 4);
+    const temperature = await this.readRegister(REGISTER.STATUS, STATUS.TEMP, 4);
+
+    log.info(`Hardware ID: ${hex(hardwareID)}`);
+    log.info(`Version: ${hex(version)}`);
+    log.info(`Options: ${hex(options)}`);
+    log.info(`Temperature: ${bytesToInt(temperature)}`);
+  }
+
+  async getGPIOState() {
+    const bytes = await this.readRegister(REGISTER.GPIO, GPIO.GPIO, 4);
+    const result = bytesToInt(bytes, false);
+    log.info(`GPIO state: ${result} [${result.toString(2)}]`);
+  }
+
+  setOutputGPIO(pin: number, value: boolean) {
+    const bitwise = 1 << pin;
+
+    if (value) {
+      this.device.writeBlock(REGISTER.GPIO, [GPIO.SET, ...intToBytes(bitwise, 4)]);
+    }
+    else {
+      this.device.writeBlock(REGISTER.GPIO, [GPIO.CLR, ...intToBytes(bitwise, 4)]);
+    }
+  }
+
+  setOutputPWM(pin: number, value: number, frequency = 256) {
+    // Byte order: [PIN, VAL, 0] (LSB not used)
+    this.device.writeBlock(REGISTER.PWM, [PWM.VALUE, pin, value, 0]);
+
+    // Byte order: [PIN, FREQ_MSB, FREQ_LSB]
+    this.device.writeBlock(REGISTER.PWM, [PWM.FREQ, pin, ...intToBytes(frequency, 2)]);
   }
 
   /** Configure device for controling a string of neopixels
