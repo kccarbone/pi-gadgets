@@ -29,5 +29,14 @@ device.setInvert(true);
 device.setDisabledDriveMode(2);
 device.enable();
 
-device.updateAllOutputs(1);
+device.setGamma(2.5);
+
+device.updateAllOutputs(10);
+//device.updateOutput(9, 100);
+//device.updateOutput(10, 100);
+//device.updateOutput(11, 5);
+//device.updateOutput(12, 0.5);
+//device.updateOutput(13, 1.2);
+//device.updateOutput(14, 0.8);
+//device.updateOutput(15, 1);
 

@@ -1,5 +1,15 @@
 /* Helpful functions for dealing with RGB elements */
 
+/**
+ * Helper method to apply a gamma curve to LED brightness values
+ * @param input initial "brightness" value
+ * @param gamma the gamma correction factor to apply to the input
+ * @param max the maximum value for the allowed brightness range
+ */
+export function gamma(input: number, gamma: number, max = 100) {
+  return ((input / max) ** gamma) * max;
+}
+
 /** Simple type representing a tri-chromatic (RGB) pixel */
 export type RGB = [number, number, number];
 

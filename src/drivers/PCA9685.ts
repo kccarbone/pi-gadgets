@@ -3,6 +3,7 @@ import BaseDevice from '../base';
 import { hex } from '../utils/formatting';
 import { getBit, setBit, intToBytes } from '../utils/bytelib';
 import { sleep } from '../utils/timing';
+import { gamma } from '../utils/color';
 
 /* PCA9685
  * Driver for PCA9685 pwm driver
@@ -47,9 +48,30 @@ enum DRIVEMODE {
   HIGHZ = 2
 }
 
+const CHANNEL_ALL = 0xfa;
+const CHANNEL = [
+  0x6,
+  0xa,
+  0xe,
+  0x12,
+  0x16,
+  0x1a,
+  0x1e,
+  0x22,
+  0x26,
+  0x2a,
+  0x2e,
+  0x32,
+  0x36,
+  0x3a,
+  0x3e,
+  0x42
+]
+
 export class Device {
   private device: BaseDevice;
   private settings: number[] = [];
+  private globalGamma = 1;
 
   constructor(i2cAddress = 0x40) {
     log.debug(`Init PCA9685 (${hex(i2cAddress)})`);
@@ -76,6 +98,11 @@ export class Device {
     const newValue = setBit(this.settings[register], bit, value);
     this.device.writeByte(register, newValue);
     this.settings[register] = newValue;
+  }
+
+  /** Set a global "gamma curve" to be applied to all outputs (not retroactive) */
+  setGamma(newValue: number) {
+    this.globalGamma = newValue;
   }
 
   /** Perform a soft restart (clears all PWM settings) */
@@ -171,25 +198,38 @@ export class Device {
     this.updateSetting(REGISTER.MODE1, MODE1.SLEEP, true);
   }
 
-  /** Update all outputs to new duty cycle (0 - 100) */
-  updateAllOutputs(dutyCycle: number) {
-    const offset = 0xfa;
-
+  /** Internal write output level to device */
+  protected writeOutput(offset: number, dutyCycle: number) {
     if (dutyCycle < 0 || dutyCycle > 100) {
       log.error(`Invalid duty cycle: ${dutyCycle}`);
     }
+    else if (dutyCycle == 0) {
+      // Constant-off mode
+      this.device.writeBlock(offset, [0, 0, 0, 0x10]);
+    }
     else if (dutyCycle == 100) {
       // Constant-on mode
+      this.device.writeBlock(offset, [0, 0x10, 0, 0]);
     }
     else {
-      const steps = Math.floor(dutyCycle * 40.96);
+      const corrected = gamma(dutyCycle, this.globalGamma);
+      const steps = Math.floor(corrected * 40.96);
       const bytes = intToBytes(steps, 2);
-      log.warn(`Input: ${dutyCycle}, Steps: ${steps}`);
-      log.fatal(JSON.stringify(bytes));
+      log.debug(`Updating duty cycle value: ${dutyCycle}, Corrected: ${corrected}, Steps: ${steps}`);
 
       // Byte order: [ON_MSB, ON_LSB, OFF_MSB, OFF_LSB]
       this.device.writeBlock(offset, [0, 0, bytes[1], bytes[0]]);
     }
+  }
+
+  /** Update single output channel to new duty cycle (0 - 100) */
+  updateOutput(channelId: number, dutyCycle: number) {
+    this.writeOutput(CHANNEL[channelId], dutyCycle);
+  }
+
+  /** Update all outputs to new duty cycle (0 - 100) */
+  updateAllOutputs(dutyCycle: number) {
+    this.writeOutput(CHANNEL_ALL, dutyCycle);
   }
 
 }
