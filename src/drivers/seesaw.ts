@@ -171,7 +171,7 @@ export class Device {
         log.warn(`Unable to update pixel at index ${offset} because only ${this.npChannelCount} have been configured`);
       }
       else {
-        log.debug(`Updating pixel at index: ${offset}`);
+        log.debug(`Updating pixel at index ${offset}: ${JSON.stringify(color)}`);
   
         // TODO: Harcoding GRB order for now
         this.npState[(offset * this.cpp) + 0] = pixel.G;
