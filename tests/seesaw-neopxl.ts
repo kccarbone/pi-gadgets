@@ -1,15 +1,15 @@
 import { env, argv, exit } from 'node:process';
 import { Logger, Levels, config } from 'bark-logger';
-import { Device, PinMapping } from '../src/drivers/seesaw';
+import { Device, Pixel, PinMapping } from '../src/drivers/seesaw';
 import { sleep } from '../src/utils/timing';
-import { RGB, Pixel } from '../src/utils/color';
+import { RGB } from '../src/utils/color';
 import { colorTest, demoReel } from './frames';
 
 const log = new Logger('base');
 config.threshold = env.LOGLEVEL ?? Levels.INFO;
 let exited = false;
 
-log.info('Connecting to device...');
+log.info('Running test...');
 const device = new Device(0x49);
 
 const stringLength = 16;
@@ -41,6 +41,11 @@ const WHT: RGB = [50, 40, 50];
   }
 })();
 
+function applyColor(color: RGB, pixelIndex: number) {
+  // RGB order
+  const px = Pixel.fromRGB(color);
+  device.setPixel(px, pixelIndex);
+}
 
 async function init() {
   device.initNeopixels(PinMapping.ATtinyXY6.PB3, stringLength);
@@ -58,7 +63,7 @@ async function clear() {
 function showFrame(frame: RGB[]) {
   device.clearPixelBuffer();
   for (let i = 0; i < frame.length; i++) {
-    device.setPixel(frame[i], i);
+    applyColor(frame[i], i);
   }
   device.showNeopixels();
 }
@@ -66,18 +71,18 @@ function showFrame(frame: RGB[]) {
 function single(index: number, color: RGB) {
   log.debug(`previous: ${previous.index}`);
   if (previous.index >= 0) {
-    device.setPixel(OFF, previous.index);
+    applyColor(OFF, previous.index);
     device.showNeopixels();
   }
 
-  device.setPixel(color, index);
+  applyColor(color, index);
   device.showNeopixels();
   previous.index = index;
 }
 
 function all(color: RGB) {
   for (let i = 0; i < stringLength; i++) {
-    device.setPixel(color, i);
+    applyColor(color, i);
   }
   device.showNeopixels();
 }
@@ -92,7 +97,7 @@ process.on('SIGINT', async () => {
   exited = true;
   await sleep(250);
   if (previous.index >= 0) {
-    device.setPixel(OFF, previous.index);
+    applyColor(OFF, previous.index);
     device.showNeopixels();
   }
   await sleep(100);

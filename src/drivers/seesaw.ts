@@ -1,6 +1,6 @@
 import { getLogger } from 'bark-logger';
 import BaseDevice from '../base';
-import { RGB, Pixel } from '../utils/color';
+import * as Color from '../utils/color';
 import { bytesToInt, intToBytes, chunkArray } from '../utils/bytelib';
 import { hex } from '../utils/formatting';
 import { sleep } from '../utils/timing';
@@ -74,13 +74,9 @@ export class Device {
   private device: BaseDevice;
   private chunkSize = 12;
   private npPin = 0;
+  private npChannelsPerPixel = 0;
   private npChannelCount = 0;
-  private npStartIndex = 0;
   private npState: number[] | undefined;
-
-  // Channels per pixel
-  // TODO: Add support for other pixel types (eg. RGBW)
-  private cpp = 3
 
   constructor(i2cAddress = 0x49) {
     log.debug(`Init seesaw (${hex(i2cAddress)})`);
@@ -135,16 +131,17 @@ export class Device {
   /** Configure device for controling a string of neopixels
    * @param pin hardware pin defined by the firmware running on-chip. See {@link PinMapping} using MTC-flashed device
    * @param pixelCount number of pixels (aka. string length)
+   * @param channelsPerPixel number of channels for each pixel (eg. RGB = 3 channels)
    */
-  initNeopixels(pin: number, pixelCount: number) {
+  initNeopixels(pin: number, pixelCount: number, channelsPerPixel = 3) {
     if (this.npPin !== pin) {
       log.debug(`Setting neopixel output pin to ${pin}`);
       this.device.writeBlock(REGISTER.NEOPIXEL, [NEOPX.PIN, pin]);
       this.npPin = pin;
     }
-    // RGB pixels use 3 channels per logical pixel
-    // TODO: Add support for different pixel types (eg. RGBW)
-    const channelCount = pixelCount * this.cpp;
+    
+    this.npChannelsPerPixel = channelsPerPixel;
+    const channelCount = pixelCount * channelsPerPixel;
 
     if (this.npChannelCount !== channelCount) {
       log.debug(`Setting neopixel channel count to ${channelCount} (for ${pixelCount} pixels)`);
@@ -156,27 +153,23 @@ export class Device {
     this.npState = new Array(this.npChannelCount || 0).fill(0);
   }
 
-  /** Set the color of a single pixel
-   * @param color new color of the pixel
-   * @param offset zero-based offset for pixel index
-   */
-  setPixel(color: RGB, offset = 0) {
-    const pixel = Pixel.fromRGB(color);
+  /** Set the color of a single pixel */
+  setPixel(pixel: Pixel, offset = 0) {
+    const cpp = this.npChannelsPerPixel;
 
     if (this.npState === undefined) {
       log.warn('Neopixels have not been initialized!');
     }
     else {
-      if (((offset + 1) * this.cpp) > this.npChannelCount) {
+      if (((offset + 1) * cpp) > this.npChannelCount) {
         log.warn(`Unable to update pixel at index ${offset} because only ${this.npChannelCount} have been configured`);
       }
       else {
-        log.debug(`Updating pixel at index ${offset}: ${JSON.stringify(color)}`);
-  
-        // TODO: Harcoding GRB order for now
-        this.npState[(offset * this.cpp) + 0] = pixel.G;
-        this.npState[(offset * this.cpp) + 1] = pixel.R;
-        this.npState[(offset * this.cpp) + 2] = pixel.B;
+        if (cpp > 0) this.npState[(offset * cpp) + 0] = pixel.R ?? 0;
+        if (cpp > 1) this.npState[(offset * cpp) + 1] = pixel.G ?? 0;
+        if (cpp > 2) this.npState[(offset * cpp) + 2] = pixel.B ?? 0;
+        if (cpp > 3) this.npState[(offset * cpp) + 3] = pixel.WW ?? 0;
+        if (cpp > 4) this.npState[(offset * cpp) + 4] = pixel.CW ?? 0;
       }
     }
   }
@@ -212,6 +205,57 @@ export class Device {
       this.npState.fill(0);
     }
   }
+}
+
+/** Single generic pixel */
+export class Pixel {
+  /** The red channel for this pixel */
+  readonly R?: number;
+  /** The green channel for this pixel */
+  readonly G?: number;
+  /** The blue channel for this pixel */
+  readonly B?: number;
+  /** The warm white channel for this pixel */
+  readonly WW?: number;
+  /** The cool white channel for this pixel */
+  readonly CW?: number;
+
+  /** Instantiate a new pixel from raw color intensities */
+  constructor(
+    red = undefined as (number | undefined),
+    green = undefined as (number | undefined),
+    blue = undefined as (number | undefined),
+    warmWhite = undefined as (number | undefined),
+    coolWhite = undefined as (number | undefined)
+  ) {
+    this.R = red;
+    this.G = green;
+    this.B = blue;
+    this.WW = warmWhite;
+    this.CW = coolWhite;
+  }
+
+  /** Create a pixel from RGB values */
+  static fromRGB(input: Color.RGB) {
+    return new Pixel(input[0], input[1], input[2]);
+  }
+
+  /** Create a pixel from GRB values */
+  static fromGRB(input: Color.GRB) {
+    return new Pixel(input[1], input[0], input[2]);
+  }
+
+  /** Create a pixel from RGBW values */
+  static fromRGBW(input: Color.RGBW) {
+    return new Pixel(input[0], input[1], input[2], input[3]);
+  }
+
+  /** Create a pixel from RGBWC values */
+  static fromRGBWC(input: Color.RGBWC) {
+    return new Pixel(input[0], input[1], input[2], input[3], input[4]);
+  }
+
+  // TODO: More initializers for eg. Hex, HSB, etc...
 }
 
 /** Pin mappings as defined by the megaTinyCore project:
