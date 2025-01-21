@@ -3,9 +3,6 @@
 /** Simple type representing a tri-chromatic (RGB) pixel */
 export type RGB = [number, number, number];
 
-/** Simple type representing a tri-chromatic (GRB) pixel */
-export type GRB = [number, number, number];
-
 /** Simple type representing a quad-chromatic (RGBW) pixel */
 export type RGBW = [number, number, number, number];
 

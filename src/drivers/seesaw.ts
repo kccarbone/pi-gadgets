@@ -241,7 +241,7 @@ export class Pixel {
   }
 
   /** Create a pixel from GRB values */
-  static fromGRB(input: Color.GRB) {
+  static fromGRB(input: Color.RGB) {
     return new Pixel(input[1], input[0], input[2]);
   }
 
@@ -250,9 +250,19 @@ export class Pixel {
     return new Pixel(input[0], input[1], input[2], input[3]);
   }
 
+  /** Create a pixel from GRBW values */
+  static fromGRBW(input: Color.RGBW) {
+    return new Pixel(input[1], input[0], input[2], input[3]);
+  }
+
   /** Create a pixel from RGBWC values */
   static fromRGBWC(input: Color.RGBWC) {
     return new Pixel(input[0], input[1], input[2], input[3], input[4]);
+  }
+
+  /** Create a pixel from GRBWC values */
+  static fromGRBWC(input: Color.RGBWC) {
+    return new Pixel(input[1], input[0], input[2], input[3], input[4]);
   }
 
   // TODO: More initializers for eg. Hex, HSB, etc...
