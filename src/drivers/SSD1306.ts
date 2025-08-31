@@ -420,7 +420,7 @@ export class Device {
 
   /** Push the contents of the display buffer to the device */
   update() {
-    log.debug(`Updating display ${this.deviceId}`);
+    log.trace(`Updating display ${this.deviceId}`);
     this.device.writeBlock(DATA_STREAM, Array.from(this.buffer));
   }
 

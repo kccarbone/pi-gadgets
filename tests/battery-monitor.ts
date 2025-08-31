@@ -27,6 +27,7 @@ session.onSpacebar(() => update());
 session.onEnd(() => dispose());
 
 update();
+setInterval(update, 1000);
 session.begin();
 
 function progBar(ratio: number, fillColor = 44, backColor = 100) {
